@@ -1,103 +1,126 @@
 # Realtimex Frappe
 
-A **uvx**-compatible CLI tool to streamline Frappe/ERPNext site setup with PostgreSQL (including Supabase-hosted) support, external Redis, custom Node.js/wkhtmltopdf binaries, and configurable app sources.
+A **uvx**-compatible CLI tool to streamline Frappe/ERPNext site setup with PostgreSQL (including Supabase-hosted) support, external Redis, and bundled binaries.
 
 **Target platforms:** macOS, Linux
 
 ## Features
 
-- 🚀 Single command to create a fully configured Frappe site with ERPNext
-- 🔧 Configure bundled Node.js and wkhtmltopdf binaries (for desktop app integration)
+- 🚀 Single command to create and start a Frappe site with ERPNext
+- 🔧 Configure bundled Node.js binaries
 - 🗄️ PostgreSQL support (including Supabase-hosted databases)
 - 📦 Support for forked/custom app repositories
 - 🔴 External Redis configuration
-- 📋 JSON-based configuration for reproducible setups
+- ✅ Automatic prerequisite validation
 
-## Installation
+## System Prerequisites
 
-```bash
-# Using uvx (recommended)
-uvx realtimex-frappe --help
+Before running, ensure these are installed on your system:
 
-# Or install with pip
-pip install realtimex-frappe
-```
-
-## Quick Start
-
-### 1. Generate a configuration file
+### macOS
 
 ```bash
-realtimex-frappe init-config -o ./my-config.json
+# Install Xcode command line tools (provides git, pkg-config)
+xcode-select --install
+
+# Install wkhtmltopdf (choose one method)
+# Method 1: Using Homebrew
+brew install wkhtmltopdf
+
+# Method 2: Download from GitHub releases
+# https://github.com/wkhtmltopdf/packaging/releases
 ```
 
-### 2. Edit the configuration
-
-```json
-{
-  "frappe": {
-    "branch": "version-15",
-    "repo": "https://github.com/frappe/frappe.git"
-  },
-  "apps": [
-    {
-      "name": "erpnext",
-      "url": "https://github.com/frappe/erpnext.git",
-      "branch": "version-15",
-      "install": true
-    }
-  ],
-  "binaries": {
-    "node": {
-      "bin_dir": "/path/to/bundled/node/bin"
-    },
-    "wkhtmltopdf": {
-      "bin_dir": "/path/to/bundled/wkhtmltopdf/bin"
-    }
-  },
-  "redis": {
-    "host": "127.0.0.1",
-    "port": 6379
-  },
-  "database": {
-    "type": "postgres",
-    "host": "localhost",
-    "port": 5432
-  }
-}
-```
-
-### 3. Validate your setup
+### Linux (Debian/Ubuntu)
 
 ```bash
-realtimex-frappe validate --config ./my-config.json
+# Install git and pkg-config
+sudo apt install git pkg-config
+
+# Install wkhtmltopdf dependencies
+sudo apt install xvfb libfontconfig
+
+# Download and install wkhtmltopdf
+# Get the .deb file from: https://wkhtmltopdf.org/downloads.html
+sudo dpkg -i wkhtmltox_*.deb
 ```
 
-### 4. Create a new site
+### Prerequisites Summary
+
+| Prerequisite | Description | macOS | Linux |
+|--------------|-------------|-------|-------|
+| `git` | Version control | `xcode-select --install` | `sudo apt install git` |
+| `pkg-config` | Build tool | `xcode-select --install` | `sudo apt install pkg-config` |
+| `wkhtmltopdf` | PDF generation | `brew install wkhtmltopdf` | Download from wkhtmltopdf.org |
+
+## Quick Start (Production)
+
+Set environment variables and run:
 
 ```bash
-realtimex-frappe new-site --config ./my-config.json
+REALTIMEX_SITE_NAME=mysite.localhost \
+REALTIMEX_ADMIN_PASSWORD=secret \
+REALTIMEX_DB_NAME=mysite \
+REALTIMEX_DB_USER=postgres \
+REALTIMEX_DB_PASSWORD=postgres \
+uvx realtimex-frappe run
 ```
+
+This single command will:
+1. ✅ Validate system prerequisites (git, pkg-config, wkhtmltopdf)
+2. ✅ Validate bundled binaries (node, npm)
+3. ✅ Initialize bench (if needed)
+4. ✅ Create the site (if needed)
+5. ✅ Install ERPNext
+6. ✅ Start the server
+
+## Environment Variables
+
+Run `realtimex-frappe env-help` for full list.
+
+**Required:**
+- `REALTIMEX_SITE_NAME` - Site name (e.g., `mysite.localhost`)
+- `REALTIMEX_ADMIN_PASSWORD` - Administrator password
+- `REALTIMEX_DB_NAME` - PostgreSQL database name
+- `REALTIMEX_DB_USER` - PostgreSQL username
+- `REALTIMEX_DB_PASSWORD` - PostgreSQL password
+
+**Optional:**
+- `REALTIMEX_NODE_BIN_DIR` - Path to bundled Node.js bin directory
+- `REALTIMEX_DB_HOST` - PostgreSQL host (default: `localhost`)
+- `REALTIMEX_REDIS_HOST` - Redis host (default: `127.0.0.1`)
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `init-config` | Generate a default configuration file |
-| `validate` | Validate configuration and check for required binaries |
-| `new-site` | Create a new Frappe site with ERPNext |
+| Command | Mode | Description |
+|---------|------|-------------|
+| `run` | **Production** | Setup + start in one command |
+| `env-help` | Helper | Show all environment variables |
+| `new-site` | Developer | Interactive site creation |
+| `init-config` | Developer | Generate default config JSON |
+| `validate` | Developer | Check config and binaries |
 
-## Configuration Reference
+## Developer Mode
 
-See [config/default.json](./config/default.json) for the full configuration schema.
+For development, use config files and interactive prompts:
+
+```bash
+# Generate config
+realtimex-frappe init-config -o ./my-config.json
+
+# Validate
+realtimex-frappe validate --config ./my-config.json
+
+# Create site
+realtimex-frappe new-site --config ./my-config.json
+```
 
 ## Requirements
 
 - Python 3.11+
-- Node.js 18+ (can be bundled)
+- Node.js 18+ (can be bundled via `REALTIMEX_NODE_BIN_DIR`)
 - Redis (external, running on port 6379)
-- PostgreSQL or Supabase
-- wkhtmltopdf (can be bundled)
+- PostgreSQL
 
 ## License
 

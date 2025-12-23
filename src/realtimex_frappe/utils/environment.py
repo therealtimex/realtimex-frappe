@@ -119,3 +119,141 @@ def get_binary_path(
         return shutil.which(binary_name)
     finally:
         os.environ["PATH"] = original_path
+
+
+# System prerequisites that must be installed on the host system
+# These cannot be bundled and must be validated before running
+SYSTEM_PREREQUISITES = {
+    "git": {
+        "required": True,
+        "description": "Git version control system",
+        "install_hint": {
+            "darwin": "xcode-select --install",
+            "linux": "sudo apt install git",
+        },
+    },
+    "pkg-config": {
+        "required": True,
+        "description": "Package config tool (required for building Python packages)",
+        "install_hint": {
+            "darwin": "xcode-select --install",
+            "linux": "sudo apt install pkg-config",
+        },
+    },
+    "wkhtmltopdf": {
+        "required": True,
+        "description": "PDF generation tool (required for printing)",
+        "install_hint": {
+            "darwin": (
+                "Download from https://github.com/wkhtmltopdf/packaging/releases\n"
+                "    Or: brew install wkhtmltopdf"
+            ),
+            "linux": (
+                "sudo apt install xvfb libfontconfig\n"
+                "    Download .deb from https://wkhtmltopdf.org/downloads.html\n"
+                "    Then: sudo dpkg -i wkhtmltox_*.deb"
+            ),
+        },
+    },
+}
+
+# Bundled binaries that can be provided via config
+BUNDLED_BINARIES = {
+    "node": {
+        "required": True,
+        "description": "Node.js runtime",
+    },
+    "npm": {
+        "required": True,
+        "description": "Node.js package manager",
+    },
+    "yarn": {
+        "required": False,
+        "description": "Yarn package manager (optional)",
+    },
+}
+
+
+class PrerequisiteValidationResult(NamedTuple):
+    """Result of system prerequisite validation."""
+
+    available: list[str]
+    missing_required: list[str]
+    missing_optional: list[str]
+
+    @property
+    def is_valid(self) -> bool:
+        """Check if all required prerequisites are available."""
+        return len(self.missing_required) == 0
+
+
+def validate_system_prerequisites() -> PrerequisiteValidationResult:
+    """Validate that system prerequisites are installed.
+
+    These are dependencies that must be installed on the host system
+    and cannot be bundled (e.g., git, pkg-config).
+
+    Returns:
+        PrerequisiteValidationResult with available and missing prerequisites.
+    """
+    available: list[str] = []
+    missing_required: list[str] = []
+    missing_optional: list[str] = []
+
+    for binary, info in SYSTEM_PREREQUISITES.items():
+        if shutil.which(binary):
+            available.append(binary)
+        elif info["required"]:
+            missing_required.append(binary)
+        else:
+            missing_optional.append(binary)
+
+    return PrerequisiteValidationResult(
+        available=available,
+        missing_required=missing_required,
+        missing_optional=missing_optional,
+    )
+
+
+def get_prerequisite_install_hint(binary: str) -> str | None:
+    """Get installation hint for a missing prerequisite.
+
+    Args:
+        binary: Name of the prerequisite.
+
+    Returns:
+        Installation command hint, or None if not found.
+    """
+    import sys
+
+    if binary not in SYSTEM_PREREQUISITES:
+        return None
+
+    hints = SYSTEM_PREREQUISITES[binary].get("install_hint", {})
+
+    if sys.platform == "darwin":
+        return hints.get("darwin")
+    else:
+        return hints.get("linux")
+
+
+def validate_all_prerequisites(
+    config: RealtimexConfig,
+) -> tuple[PrerequisiteValidationResult, BinaryValidationResult]:
+    """Validate both system prerequisites and bundled binaries.
+
+    Args:
+        config: The realtimex configuration.
+
+    Returns:
+        Tuple of (system_result, binaries_result).
+    """
+    system_result = validate_system_prerequisites()
+
+    required_binaries = [
+        name for name, info in BUNDLED_BINARIES.items() if info["required"]
+    ]
+    binaries_result = validate_binaries(config, required_binaries)
+
+    return system_result, binaries_result
+
