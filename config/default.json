@@ -1,0 +1,46 @@
+{
+  "$schema": "./schema.json",
+  "version": "1.0.0",
+  "frappe": {
+    "branch": "version-15",
+    "repo": "https://github.com/frappe/frappe.git"
+  },
+  "apps": [
+    {
+      "name": "erpnext",
+      "url": "https://github.com/frappe/erpnext.git",
+      "branch": "version-15",
+      "install": true
+    }
+  ],
+  "binaries": {
+    "node": {
+      "bin_dir": null,
+      "version": "18"
+    },
+    "wkhtmltopdf": {
+      "bin_dir": null
+    }
+  },
+  "redis": {
+    "host": "127.0.0.1",
+    "port": 6379,
+    "use_external": true
+  },
+  "database": {
+    "type": "postgres",
+    "host": "localhost",
+    "port": 5432,
+    "name": null,
+    "user": null,
+    "password": null
+  },
+  "site": {
+    "name": null,
+    "admin_password": null
+  },
+  "bench": {
+    "path": "./frappe-bench",
+    "developer_mode": true
+  }
+}
