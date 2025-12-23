@@ -256,3 +256,70 @@ def bench_exists(config: RealtimexConfig) -> bool:
     """
     bench_path = Path(config.bench.path)
     return (bench_path / "sites").exists() and (bench_path / "apps").exists()
+
+
+def site_exists(config: RealtimexConfig) -> bool:
+    """Check if the site already exists.
+
+    Args:
+        config: The realtimex configuration.
+
+    Returns:
+        True if the site directory exists.
+    """
+    if not config.site.name:
+        return False
+
+    bench_path = Path(config.bench.path)
+    site_path = bench_path / "sites" / config.site.name
+
+    return site_path.exists()
+
+
+def start_bench(config: RealtimexConfig) -> None:
+    """Start the bench server (blocking).
+
+    This function does not return - it replaces the current process
+    with the bench start command.
+
+    Args:
+        config: The realtimex configuration.
+    """
+    import os
+    import sys
+
+    bench_path = Path(config.bench.path).resolve()
+    env = build_environment(config)
+
+    console.print(f"\n[bold green]Starting bench at {bench_path}...[/bold green]")
+    console.print(f"[dim]Site will be available at: http://{config.site.name}:8000[/dim]\n")
+
+    # Change to bench directory and exec bench start
+    os.chdir(bench_path)
+
+    # Use os.execvpe to replace the current process with bench start
+    # This ensures the process keeps running and handles signals properly
+    os.execvpe("bench", ["bench", "start"], env)
+
+
+def run_bench_start_subprocess(config: RealtimexConfig) -> subprocess.Popen:
+    """Start the bench server as a subprocess.
+
+    Args:
+        config: The realtimex configuration.
+
+    Returns:
+        The subprocess.Popen object for the running bench.
+    """
+    bench_path = Path(config.bench.path).resolve()
+    env = build_environment(config)
+
+    console.print(f"\n[bold green]Starting bench at {bench_path}...[/bold green]")
+    console.print(f"[dim]Site will be available at: http://{config.site.name}:8000[/dim]\n")
+
+    return subprocess.Popen(
+        ["bench", "start"],
+        cwd=bench_path,
+        env=env,
+    )
+

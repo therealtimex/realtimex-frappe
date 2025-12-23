@@ -231,5 +231,68 @@ def new_site(
         raise click.Abort()
 
 
+@main.command("run")
+def run():
+    """Set up and start a Frappe site (production mode).
+
+    This is the primary command for production use. It reads configuration
+    from environment variables, sets up the site if needed, and starts the
+    bench server.
+
+    Required environment variables:
+        REALTIMEX_SITE_NAME: Site name (e.g., mysite.localhost)
+        REALTIMEX_ADMIN_PASSWORD: Administrator password
+        REALTIMEX_DB_NAME: PostgreSQL database name
+        REALTIMEX_DB_USER: PostgreSQL username
+        REALTIMEX_DB_PASSWORD: PostgreSQL password
+
+    Optional environment variables:
+        REALTIMEX_DB_HOST: PostgreSQL host (default: localhost)
+        REALTIMEX_DB_PORT: PostgreSQL port (default: 5432)
+        REALTIMEX_REDIS_HOST: Redis host (default: 127.0.0.1)
+        REALTIMEX_REDIS_PORT: Redis port (default: 6379)
+        REALTIMEX_BENCH_PATH: Bench path (default: ./frappe-bench)
+        REALTIMEX_NODE_BIN_DIR: Path to Node.js bin directory
+        REALTIMEX_FRAPPE_BRANCH: Frappe branch (default: version-15)
+
+    Example:
+        REALTIMEX_SITE_NAME=mysite.localhost \\
+        REALTIMEX_ADMIN_PASSWORD=secret \\
+        REALTIMEX_DB_NAME=mysite \\
+        REALTIMEX_DB_USER=postgres \\
+        REALTIMEX_DB_PASSWORD=postgres \\
+        uvx realtimex-frappe run
+    """
+    from .commands.run import run_setup_and_start
+
+    run_setup_and_start()
+
+
+@main.command("env-help")
+def env_help():
+    """Show available environment variables.
+
+    Lists all environment variables that can be used to configure
+    the 'run' command, along with their default values and descriptions.
+
+    Example:
+        realtimex-frappe env-help
+    """
+    from .config.env import print_env_var_help
+
+    console.print("[bold]Environment Variables for 'realtimex-frappe run'[/bold]\n")
+    print_env_var_help()
+    console.print("\n[dim]Example usage:[/dim]")
+    console.print('''
+[cyan]REALTIMEX_SITE_NAME[/cyan]=mysite.localhost \\
+[cyan]REALTIMEX_ADMIN_PASSWORD[/cyan]=secret \\
+[cyan]REALTIMEX_DB_NAME[/cyan]=mysite \\
+[cyan]REALTIMEX_DB_USER[/cyan]=postgres \\
+[cyan]REALTIMEX_DB_PASSWORD[/cyan]=postgres \\
+uvx realtimex-frappe run
+''')
+
+
 if __name__ == "__main__":
     main()
+
