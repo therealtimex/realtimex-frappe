@@ -61,7 +61,6 @@ def init_bench(config: RealtimexConfig) -> bool:
         "--frappe-path",
         config.frappe.repo,
         "--skip-redis-config-generation",  # Use external Redis
-        "--verbose",
     ]
 
     if config.bench.developer_mode:
