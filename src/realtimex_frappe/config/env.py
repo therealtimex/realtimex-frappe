@@ -66,7 +66,7 @@ def config_from_environment() -> RealtimexConfig:
         REALTIMEX_DB_PASSWORD: Database password
         REALTIMEX_REDIS_HOST: Redis host (default: 127.0.0.1)
         REALTIMEX_REDIS_PORT: Redis port (default: 6379)
-        REALTIMEX_BENCH_PATH: Path for bench installation (default: ./frappe-bench)
+        REALTIMEX_BENCH_PATH: Path for bench installation (default: ~/.realtimex.ai/storage/local-apps/frappe-bench)
         REALTIMEX_NODE_BIN_DIR: Path to Node.js bin directory
         REALTIMEX_WKHTMLTOPDF_BIN_DIR: Path to wkhtmltopdf bin directory
         REALTIMEX_FRAPPE_BRANCH: Frappe branch (default: version-15)
@@ -169,7 +169,7 @@ def print_env_var_help() -> None:
         (ENV_DB_TYPE, "No", "postgres", "Database type"),
         (ENV_REDIS_HOST, "No", "127.0.0.1", "Redis host"),
         (ENV_REDIS_PORT, "No", "6379", "Redis port"),
-        (ENV_BENCH_PATH, "No", "./frappe-bench", "Bench installation path"),
+        (ENV_BENCH_PATH, "No", "~/.realtimex.ai/storage/local-apps/frappe-bench", "Bench installation path"),
         (ENV_NODE_BIN_DIR, "No", "-", "Path to bundled Node.js bin directory"),
         (ENV_WKHTMLTOPDF_BIN_DIR, "No", "-", "Path to bundled wkhtmltopdf bin directory"),
         (ENV_FRAPPE_BRANCH, "No", "version-15", "Frappe/ERPNext branch"),

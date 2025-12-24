@@ -26,6 +26,7 @@ from ..utils.environment import (
     validate_all_prerequisites,
     validate_system_prerequisites,
 )
+from ..utils.paths import ensure_bench_directory
 
 console = Console()
 
@@ -106,6 +107,8 @@ def run_setup_and_start(config: Optional[RealtimexConfig] = None) -> None:
     if bench_exists(config):
         console.print(f"[green]✓[/green] Using existing bench at {config.bench.path}")
     else:
+        # Ensure the storage directory exists
+        ensure_bench_directory()
         console.print("[blue]Initializing new bench...[/blue]")
         if not init_bench(config):
             console.print("[red]✗ Failed to initialize bench[/red]")

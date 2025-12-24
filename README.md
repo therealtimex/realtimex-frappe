@@ -12,6 +12,7 @@ A **uvx**-compatible CLI tool to streamline Frappe/ERPNext site setup with Postg
 - 📦 Support for forked/custom app repositories
 - 🔴 External Redis configuration
 - ✅ Automatic prerequisite validation
+- 📁 Persistent bench storage in `~/.realtimex.ai/storage/local-apps/frappe-bench`
 
 ## System Prerequisites
 
@@ -69,7 +70,7 @@ uvx realtimex-frappe run
 This single command will:
 1. ✅ Validate system prerequisites (git, pkg-config, wkhtmltopdf)
 2. ✅ Validate bundled binaries (node, npm)
-3. ✅ Initialize bench (if needed)
+3. ✅ Initialize bench at `~/.realtimex.ai/storage/local-apps/frappe-bench` (if needed)
 4. ✅ Create the site (if needed)
 5. ✅ Install ERPNext
 6. ✅ Start the server
@@ -89,6 +90,7 @@ Run `realtimex-frappe env-help` for full list.
 - `REALTIMEX_NODE_BIN_DIR` - Path to bundled Node.js bin directory
 - `REALTIMEX_DB_HOST` - PostgreSQL host (default: `localhost`)
 - `REALTIMEX_REDIS_HOST` - Redis host (default: `127.0.0.1`)
+- `REALTIMEX_BENCH_PATH` - Bench installation path (default: `~/.realtimex.ai/storage/local-apps/frappe-bench`)
 
 ## Commands
 
@@ -114,6 +116,22 @@ realtimex-frappe validate --config ./my-config.json
 # Create site
 realtimex-frappe new-site --config ./my-config.json
 ```
+
+## Storage Location
+
+By default, all bench data is stored in a persistent location:
+
+```
+~/.realtimex.ai/
+└── storage/
+    └── local-apps/              # Parent for multiple local applications
+        └── frappe-bench/        # The Frappe bench lives here
+            ├── apps/
+            ├── sites/
+            └── ...
+```
+
+This ensures your bench persists across terminal sessions and is not affected by the current working directory.
 
 ## Requirements
 

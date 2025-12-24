@@ -5,6 +5,8 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from ..utils.paths import get_default_bench_path
+
 
 class FrappeConfig(BaseModel):
     """Configuration for Frappe framework."""
@@ -95,10 +97,18 @@ class SiteConfig(BaseModel):
 class BenchConfig(BaseModel):
     """Configuration for the bench installation."""
 
-    path: str = "./frappe-bench"
+    path: str = Field(default_factory=get_default_bench_path)
     developer_mode: bool = True
     version: Optional[str] = None
     """Pinned bench version (e.g., 'v15.93.0'). If None, uses latest."""
+
+    @field_validator("path", mode="before")
+    @classmethod
+    def validate_path(cls, v: str | None) -> str:
+        """Use default path if null or empty is provided."""
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return get_default_bench_path()
+        return v
 
 
 class RealtimexConfig(BaseModel):
