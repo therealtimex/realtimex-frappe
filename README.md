@@ -1,170 +1,180 @@
 # Realtimex Frappe
 
-A **uvx**-compatible CLI tool to streamline Frappe/ERPNext site setup with PostgreSQL (including Supabase-hosted) support, external Redis, and bundled binaries.
+A CLI tool to set up Frappe/ERPNext sites with PostgreSQL, external Redis, and bundled binaries.
 
-**Target platforms:** macOS, Linux
+**Platforms:** macOS, Linux
 
-## Features
+---
 
-- 🚀 Single command to create and start a Frappe site with ERPNext
-- 🔧 Configure bundled Node.js binaries
-- 🗄️ PostgreSQL support (including Supabase-hosted databases)
-- 📦 Support for forked/custom app repositories
-- 🔴 External Redis configuration
-- ✅ Automatic prerequisite validation
-- 📁 Persistent bench storage in `~/.realtimex.ai/storage/local-apps/frappe-bench`
+## 🚀 Quick Setup for RealTimeX Local App
 
-## System Prerequisites
+> [!IMPORTANT]
+> **Follow this section to run Frappe inside the RealTimeX Local App environment.**
 
-Before running, ensure these are installed on your system:
+### Step 1: Install Prerequisites
 
-### macOS
+| Prerequisite | Check Command | macOS Install |
+|--------------|---------------|---------------|
+| **Git** | `git --version` | `xcode-select --install` |
+| **Node.js 18+** | `node --version` | `brew install node@18` or bundled |
+| **pkg-config** | `which pkg-config` | `xcode-select --install` |
+| **wkhtmltopdf** | `wkhtmltopdf --version` | `brew install wkhtmltopdf` |
+| **Redis** | `redis-cli ping` | `brew install redis && brew services start redis` |
 
+> [!TIP]
+> **Using a remote database?** Skip PostgreSQL installation and configure `REALTIMEX_DB_HOST` to point to your remote server (e.g., Supabase).
+
+**For local PostgreSQL:**
 ```bash
-# Install Xcode command line tools (provides git, pkg-config)
-xcode-select --install
-
-# Install wkhtmltopdf (choose one method)
-# Method 1: Using Homebrew
-brew install wkhtmltopdf
-
-# Method 2: Download from GitHub releases
-# https://github.com/wkhtmltopdf/packaging/releases
+brew install postgresql@15 && brew services start postgresql@15
 ```
 
-### Linux (Debian/Ubuntu)
+### Step 2: Configure RealTimeX App
 
-```bash
-# Install git and pkg-config
-sudo apt install git pkg-config
+Add this to your RealTimeX Local App configuration:
 
-# Install wkhtmltopdf dependencies
-sudo apt install xvfb libfontconfig
-
-# Download and install wkhtmltopdf
-# Get the .deb file from: https://wkhtmltopdf.org/downloads.html
-sudo dpkg -i wkhtmltox_*.deb
+```json
+{
+  "command": "uvx",
+  "args": ["realtimex-frappe", "run"],
+  "env": {
+    "REALTIMEX_SITE_NAME": "mysite.localhost",
+    "REALTIMEX_ADMIN_PASSWORD": "admin",
+    "REALTIMEX_DB_NAME": "frappe_mysite",
+    "REALTIMEX_DB_USER": "postgres",
+    "REALTIMEX_DB_PASSWORD": "postgres",
+    "REALTIMEX_NODE_BIN_DIR": "/path/to/node/bin"
+  },
+  "working_dir": "",
+  "port": 8000
+}
 ```
 
-### Prerequisites Summary
+**For remote database (e.g., Supabase):**
+```json
+{
+  "command": "uvx",
+  "args": ["realtimex-frappe", "run"],
+  "env": {
+    "REALTIMEX_SITE_NAME": "mysite.localhost",
+    "REALTIMEX_ADMIN_PASSWORD": "admin",
+    "REALTIMEX_DB_NAME": "frappe_prod",
+    "REALTIMEX_DB_USER": "postgres.xxxx",
+    "REALTIMEX_DB_PASSWORD": "your-password",
+    "REALTIMEX_DB_HOST": "db.xxxx.supabase.co",
+    "REALTIMEX_DB_PORT": "5432",
+    "REALTIMEX_NODE_BIN_DIR": "/path/to/node/bin"
+  },
+  "working_dir": "",
+  "port": 8000
+}
+```
 
-| Prerequisite | Description | macOS | Linux |
-|--------------|-------------|-------|-------|
-| `git` | Version control | `xcode-select --install` | `sudo apt install git` |
-| `pkg-config` | Build tool | `xcode-select --install` | `sudo apt install pkg-config` |
-| `wkhtmltopdf` | PDF generation | `brew install wkhtmltopdf` | Download from wkhtmltopdf.org |
+### Step 3: Run
 
-## Quick Start (Production)
-
-Set environment variables and run:
+Start the app through RealTimeX, or run directly:
 
 ```bash
-REALTIMEX_SITE_NAME=mysite.localhost \
-REALTIMEX_ADMIN_PASSWORD=secret \
-REALTIMEX_DB_NAME=mysite \
-REALTIMEX_DB_USER=postgres \
-REALTIMEX_DB_PASSWORD=postgres \
 uvx realtimex-frappe run
 ```
 
-This single command will:
-1. ✅ Validate system prerequisites (git, pkg-config, wkhtmltopdf)
-2. ✅ Validate bundled binaries (node, npm)
-3. ✅ Initialize bench at `~/.realtimex.ai/storage/local-apps/frappe-bench` (if needed)
-4. ✅ Create the site (if needed)
-5. ✅ Install ERPNext
-6. ✅ Start the server
+Your site will be available at **http://mysite.localhost:8000**
+
+---
 
 ## Environment Variables
 
-Run `realtimex-frappe env-help` for full list.
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `REALTIMEX_SITE_NAME` | ✅ | - | Site name (e.g., `mysite.localhost`) |
+| `REALTIMEX_ADMIN_PASSWORD` | ✅ | - | Admin password |
+| `REALTIMEX_DB_NAME` | ✅ | - | Database name |
+| `REALTIMEX_DB_USER` | ✅ | - | PostgreSQL username (root credentials) |
+| `REALTIMEX_DB_PASSWORD` | ✅ | - | PostgreSQL password |
+| `REALTIMEX_NODE_BIN_DIR` | ⚠️ | - | Path to Node.js bin directory |
+| `REALTIMEX_DB_HOST` | - | `localhost` | PostgreSQL host |
+| `REALTIMEX_DB_PORT` | - | `5432` | PostgreSQL port |
+| `REALTIMEX_REDIS_HOST` | - | `127.0.0.1` | Redis host |
+| `REALTIMEX_BENCH_PATH` | - | `~/.realtimex.ai/.../frappe-bench` | Bench installation path |
 
-**Required:**
-- `REALTIMEX_SITE_NAME` - Site name (e.g., `mysite.localhost`)
-- `REALTIMEX_ADMIN_PASSWORD` - Administrator password
-- `REALTIMEX_DB_NAME` - PostgreSQL database name
-- `REALTIMEX_DB_USER` - PostgreSQL username
-- `REALTIMEX_DB_PASSWORD` - PostgreSQL password
+Run `realtimex-frappe env-help` for the complete list.
 
-**Optional:**
-- `REALTIMEX_NODE_BIN_DIR` - Path to bundled Node.js bin directory
-- `REALTIMEX_DB_HOST` - PostgreSQL host (default: `localhost`)
-- `REALTIMEX_REDIS_HOST` - Redis host (default: `127.0.0.1`)
-- `REALTIMEX_BENCH_PATH` - Bench installation path (default: `~/.realtimex.ai/storage/local-apps/frappe-bench`)
+---
 
-## ⚠️ Database Name Configuration
+## ⚠️ Database Configuration
 
 > [!CAUTION]
-> **Danger: The `REALTIMEX_DB_NAME` setting directly controls which database Frappe will CREATE and use.**
-
-### Important Recommendations:
-
-1. **Always use a dedicated database** - Do not use shared database names like `postgres` or your production databases.
-
-2. **Auto-generated names recommended** - For automated deployments, consider generating unique database names (e.g., `frappe_mysite_abc123`) to avoid conflicts.
-
-3. **Never reuse database names** - Reinitializing with an existing database name may cause data loss if `--force` is used.
-
-4. **PostgreSQL root credentials** - The `REALTIMEX_DB_USER` and `REALTIMEX_DB_PASSWORD` are used as **root credentials** to create the database and application user. Ensure they have sufficient privileges.
-
-### Example: Safe Database Naming
+> **`REALTIMEX_DB_NAME` controls which database Frappe will CREATE.** Use unique, dedicated names.
 
 ```bash
-# Good: Unique, dedicated database name
-REALTIMEX_DB_NAME="frappe_mysite_$(date +%s)"
+# ✅ Good: Unique database name
+REALTIMEX_DB_NAME="frappe_mysite_001"
 
-# Bad: Generic names that may conflict
-REALTIMEX_DB_NAME="postgres"      # Don't use!
-REALTIMEX_DB_NAME="production"    # Too generic!
+# ❌ Bad: Generic or shared names
+REALTIMEX_DB_NAME="postgres"
 ```
 
-## Commands
+**Notes:**
+- `REALTIMEX_DB_USER` and `REALTIMEX_DB_PASSWORD` are used as **root credentials** to create the database
+- For remote databases, ensure the user has `CREATE DATABASE` privileges
 
-| Command | Mode | Description |
-|---------|------|-------------|
-| `run` | **Production** | Setup + start in one command |
-| `env-help` | Helper | Show all environment variables |
-| `new-site` | Developer | Interactive site creation |
-| `init-config` | Developer | Generate default config JSON |
-| `validate` | Developer | Check config and binaries |
-
-## Developer Mode
-
-For development, use config files and interactive prompts:
-
-```bash
-# Generate config
-realtimex-frappe init-config -o ./my-config.json
-
-# Validate
-realtimex-frappe validate --config ./my-config.json
-
-# Create site
-realtimex-frappe new-site --config ./my-config.json
-```
+---
 
 ## Storage Location
 
-By default, all bench data is stored in a persistent location:
+Bench data is stored persistently at:
 
 ```
-~/.realtimex.ai/
-└── storage/
-    └── local-apps/              # Parent for multiple local applications
-        └── frappe-bench/        # The Frappe bench lives here
-            ├── apps/
-            ├── sites/
-            └── ...
+~/.realtimex.ai/storage/local-apps/frappe-bench/
 ```
 
-This ensures your bench persists across terminal sessions and is not affected by the current working directory.
+This location persists across restarts and is independent of the working directory.
+
+---
+
+## Linux Setup
+
+```bash
+# System dependencies
+sudo apt update && sudo apt install git pkg-config curl
+
+# Redis
+sudo apt install redis-server && sudo systemctl enable --now redis-server
+
+# PostgreSQL (skip if using remote database)
+sudo apt install postgresql postgresql-contrib && sudo systemctl enable --now postgresql
+
+# wkhtmltopdf
+sudo apt install xvfb libfontconfig
+# Download from https://wkhtmltopdf.org/downloads.html
+sudo dpkg -i wkhtmltox_*.deb
+
+# Node.js 18+
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install nodejs
+```
+
+---
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `run` | Setup and start (production) |
+| `env-help` | Show environment variables |
+| `validate` | Check prerequisites |
+
+---
 
 ## Requirements
 
 - Python 3.11+
-- Node.js 18+ (can be bundled via `REALTIMEX_NODE_BIN_DIR`)
-- Redis (external, running on port 6379)
-- PostgreSQL
+- Node.js 18+
+- Redis 6+
+- PostgreSQL 13+ (local or remote)
+- Git, pkg-config, wkhtmltopdf
+
+---
 
 ## License
 
