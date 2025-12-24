@@ -42,8 +42,7 @@ Add this to your RealTimeX Local App configuration:
     "REALTIMEX_ADMIN_PASSWORD": "admin",
     "REALTIMEX_DB_NAME": "frappe_mysite",
     "REALTIMEX_DB_USER": "postgres",
-    "REALTIMEX_DB_PASSWORD": "postgres",
-    "REALTIMEX_NODE_BIN_DIR": "/path/to/node/bin"
+    "REALTIMEX_DB_PASSWORD": "postgres"
   },
   "working_dir": "",
   "port": 8000
@@ -62,8 +61,7 @@ Add this to your RealTimeX Local App configuration:
     "REALTIMEX_DB_USER": "postgres.xxxx",
     "REALTIMEX_DB_PASSWORD": "your-password",
     "REALTIMEX_DB_HOST": "db.xxxx.supabase.co",
-    "REALTIMEX_DB_PORT": "5432",
-    "REALTIMEX_NODE_BIN_DIR": "/path/to/node/bin"
+    "REALTIMEX_DB_PORT": "5432"
   },
   "working_dir": "",
   "port": 8000
@@ -72,13 +70,30 @@ Add this to your RealTimeX Local App configuration:
 
 ### Step 3: Run
 
-Start the app through RealTimeX, or run directly:
+**Option A: Via RealTimeX App**
+
+Simply start the app through the RealTimeX interface. The JSON configuration above handles all environment variables automatically.
+
+**Option B: Direct Command Line**
+
+Set environment variables and run manually:
 
 ```bash
+export REALTIMEX_SITE_NAME=mysite.localhost
+export REALTIMEX_ADMIN_PASSWORD=admin
+export REALTIMEX_DB_NAME=frappe_mysite
+export REALTIMEX_DB_USER=postgres
+export REALTIMEX_DB_PASSWORD=postgres
+
+# For remote database, also set:
+# export REALTIMEX_DB_HOST=db.xxxx.supabase.co
+
 uvx realtimex-frappe run
 ```
 
-Your site will be available at **http://mysite.localhost:8000**
+---
+
+**Result:** Your site will be available at **http://mysite.localhost:8000**
 
 ---
 
@@ -95,7 +110,7 @@ Your site will be available at **http://mysite.localhost:8000**
 | `REALTIMEX_DB_HOST` | - | `localhost` | PostgreSQL host |
 | `REALTIMEX_DB_PORT` | - | `5432` | PostgreSQL port |
 | `REALTIMEX_REDIS_HOST` | - | `127.0.0.1` | Redis host |
-| `REALTIMEX_BENCH_PATH` | - | `~/.realtimex.ai/.../frappe-bench` | Bench installation path |
+| `REALTIMEX_BENCH_PATH` | - | `~/.realtimex.ai/storage/local-apps/frappe-bench` | Bench installation path |
 
 Run `realtimex-frappe env-help` for the complete list.
 
