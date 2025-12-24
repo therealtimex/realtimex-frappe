@@ -114,6 +114,12 @@ def update_common_site_config(config: RealtimexConfig) -> None:
 def create_site(config: RealtimexConfig) -> bool:
     """Create a new Frappe site.
 
+    Uses provided credentials as root credentials to create the database
+    and user. Frappe's setup_database() will:
+    1. Create user if not exists (or update password)
+    2. Create database
+    3. Grant permissions
+
     Args:
         config: The realtimex configuration.
 
@@ -137,19 +143,24 @@ def create_site(config: RealtimexConfig) -> bool:
         config.site.admin_password,
     ]
 
-    # Add database configuration
+    # Database type
+    if config.database.type:
+        args.extend(["--db-type", config.database.type])
+
+    # Database connection settings
     if config.database.host:
         args.extend(["--db-host", config.database.host])
     if config.database.port:
         args.extend(["--db-port", str(config.database.port)])
     if config.database.name:
         args.extend(["--db-name", config.database.name])
+
+    # Pass credentials as root credentials for database setup
+    # Frappe will use these to create the database and user
     if config.database.user:
-        args.extend(["--db-user", config.database.user])
+        args.extend(["--db-root-username", config.database.user])
     if config.database.password:
-        args.extend(["--db-password", config.database.password])
-    if config.database.type == "postgres":
-        args.extend(["--db-type", "postgres"])
+        args.extend(["--db-root-password", config.database.password])
 
     console.print(f"[blue]Creating site {config.site.name}...[/blue]")
     result = run_bench_command(args, config, cwd=bench_path)
