@@ -92,6 +92,32 @@ Run `realtimex-frappe env-help` for full list.
 - `REALTIMEX_REDIS_HOST` - Redis host (default: `127.0.0.1`)
 - `REALTIMEX_BENCH_PATH` - Bench installation path (default: `~/.realtimex.ai/storage/local-apps/frappe-bench`)
 
+## ⚠️ Database Name Configuration
+
+> [!CAUTION]
+> **Danger: The `REALTIMEX_DB_NAME` setting directly controls which database Frappe will CREATE and use.**
+
+### Important Recommendations:
+
+1. **Always use a dedicated database** - Do not use shared database names like `postgres` or your production databases.
+
+2. **Auto-generated names recommended** - For automated deployments, consider generating unique database names (e.g., `frappe_mysite_abc123`) to avoid conflicts.
+
+3. **Never reuse database names** - Reinitializing with an existing database name may cause data loss if `--force` is used.
+
+4. **PostgreSQL root credentials** - The `REALTIMEX_DB_USER` and `REALTIMEX_DB_PASSWORD` are used as **root credentials** to create the database and application user. Ensure they have sufficient privileges.
+
+### Example: Safe Database Naming
+
+```bash
+# Good: Unique, dedicated database name
+REALTIMEX_DB_NAME="frappe_mysite_$(date +%s)"
+
+# Bad: Generic names that may conflict
+REALTIMEX_DB_NAME="postgres"      # Don't use!
+REALTIMEX_DB_NAME="production"    # Too generic!
+```
+
 ## Commands
 
 | Command | Mode | Description |
