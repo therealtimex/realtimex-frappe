@@ -2,14 +2,20 @@
   "$schema": "./schema.json",
   "version": "1.0.0",
   "frappe": {
-    "branch": "version-15",
-    "repo": "https://github.com/frappe/frappe.git"
+    "branch": "realtimex/v15.93.0",
+    "repo": "https://github.com/therealtimex/frappe.git"
   },
   "apps": [
     {
       "name": "erpnext",
-      "url": "https://github.com/frappe/erpnext.git",
-      "branch": "version-15",
+      "url": "https://github.com/therealtimex/erpnext.git",
+      "branch": "realtimex/v15.93.0",
+      "install": true
+    },
+    {
+      "name": "hrms",
+      "url": "https://github.com/therealtimex/hrms.git",
+      "branch": "realtimex/v15.54.1",
       "install": true
     }
   ],
@@ -41,6 +47,7 @@
   },
   "bench": {
     "path": "./frappe-bench",
-    "developer_mode": true
+    "developer_mode": true,
+    "version": "v15.93.0"
   }
 }

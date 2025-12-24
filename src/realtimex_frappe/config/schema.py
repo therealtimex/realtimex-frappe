@@ -97,6 +97,8 @@ class BenchConfig(BaseModel):
 
     path: str = "./frappe-bench"
     developer_mode: bool = True
+    version: Optional[str] = None
+    """Pinned bench version (e.g., 'v15.93.0'). If None, uses latest."""
 
 
 class RealtimexConfig(BaseModel):
