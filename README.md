@@ -18,8 +18,15 @@ A CLI tool to set up Frappe/ERPNext sites with PostgreSQL, external Redis, and b
 | **Git** | `git --version` | `xcode-select --install` |
 | **Node.js 18+** | `node --version` | `brew install node@18` or bundled |
 | **pkg-config** | `which pkg-config` | `xcode-select --install` |
-| **wkhtmltopdf** | `wkhtmltopdf --version` | `brew install wkhtmltopdf` |
+| **wkhtmltopdf** | `wkhtmltopdf --version` | See below |
 | **Redis** | `redis-cli ping` | `brew install redis && brew services start redis` |
+
+**wkhtmltopdf (macOS):**
+```bash
+curl -L https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-2/wkhtmltox-0.12.6-2.macos-cocoa.pkg -O
+installer -pkg wkhtmltox-0.12.6-2.macos-cocoa.pkg -target ~
+# If permission denied, use: sudo installer -pkg wkhtmltox-0.12.6-2.macos-cocoa.pkg -target /
+```
 
 > [!TIP]
 > **Using a remote database?** Skip PostgreSQL installation and configure `REALTIMEX_DB_HOST` to point to your remote server (e.g., Supabase).
@@ -159,10 +166,8 @@ sudo apt install redis-server && sudo systemctl enable --now redis-server
 # PostgreSQL (skip if using remote database)
 sudo apt install postgresql postgresql-contrib && sudo systemctl enable --now postgresql
 
-# wkhtmltopdf
+# wkhtmltopdf dependencies
 sudo apt install xvfb libfontconfig
-# Download from https://wkhtmltopdf.org/downloads.html
-sudo dpkg -i wkhtmltox_*.deb
 
 # Node.js 18+
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
