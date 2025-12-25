@@ -60,7 +60,6 @@ def init_bench(config: RealtimexConfig) -> bool:
         config.frappe.branch,
         "--frappe-path",
         config.frappe.repo,
-        "--skip-redis-config-generation",  # Use external Redis
     ]
 
     if config.bench.developer_mode:
@@ -74,19 +73,26 @@ def init_bench(config: RealtimexConfig) -> bool:
 def update_common_site_config(config: RealtimexConfig) -> None:
     """Update common_site_config.json with Redis and DB settings.
 
+    Writes directly to the JSON file rather than using 'bench config'
+    command, which fails on Redis URLs containing '://' due to
+    ast.literal_eval in the bench library.
+
     Args:
         config: The realtimex configuration.
     """
     bench_path = Path(config.bench.path)
     config_path = bench_path / "sites" / "common_site_config.json"
 
+    # Load existing config or start fresh
     site_config: dict = {}
     if config_path.exists():
         with open(config_path) as f:
             site_config = json.load(f)
 
-    # External Redis configuration
+    # Set Redis URLs
     redis_url = config.redis.url
+    console.print(f"[dim]Setting Redis URL: {redis_url}[/dim]")
+
     site_config.update(
         {
             "redis_cache": redis_url,
@@ -95,7 +101,7 @@ def update_common_site_config(config: RealtimexConfig) -> None:
         }
     )
 
-    # PostgreSQL configuration
+    # Set PostgreSQL config
     if config.database.type == "postgres":
         site_config.update(
             {
@@ -104,10 +110,13 @@ def update_common_site_config(config: RealtimexConfig) -> None:
             }
         )
 
+    # Write config
     with open(config_path, "w") as f:
         json.dump(site_config, f, indent=2)
 
-    console.print("[green]✓[/green] Updated common_site_config.json")
+    console.print(f"[green]✓[/green] Updated common_site_config.json")
+    console.print(f"[dim]  Redis: {redis_url}[/dim]")
+    console.print(f"[dim]  DB Host: {config.database.host}:{config.database.port}[/dim]")
 
 
 def create_site(config: RealtimexConfig) -> bool:
@@ -245,6 +254,66 @@ def install_all_apps(config: RealtimexConfig) -> bool:
             return False
 
         # Install on site
+        console.print(f"[blue]Installing {app.name} on {config.site.name}...[/blue]")
+        if not install_app(config, app.name):
+            console.print(f"[red]✗ Failed to install {app.name}[/red]")
+            return False
+
+        console.print(f"[green]✓[/green] Installed {app.name}")
+
+    return True
+
+
+def get_all_apps(config: RealtimexConfig) -> bool:
+    """Get (clone) all apps from configuration without installing.
+
+    This step only clones the app repositories into the bench.
+    Use install_apps_on_site() after bench start to install them.
+
+    Args:
+        config: The realtimex configuration.
+
+    Returns:
+        True if all apps were cloned successfully, False otherwise.
+    """
+    for app in config.apps:
+        if not app.install:
+            console.print(f"[dim]Skipping {app.name} (install=false)[/dim]")
+            continue
+
+        # Check if app already exists
+        bench_path = Path(config.bench.path)
+        app_path = bench_path / "apps" / app.name
+        if app_path.exists():
+            console.print(f"[green]✓[/green] App {app.name} already exists")
+            continue
+
+        console.print(f"[blue]Getting {app.name}...[/blue]")
+        if not get_app(config, app.url, app.branch):
+            console.print(f"[red]✗ Failed to get {app.name}[/red]")
+            return False
+
+        console.print(f"[green]✓[/green] Got {app.name}")
+
+    return True
+
+
+def install_apps_on_site(config: RealtimexConfig) -> bool:
+    """Install all apps on the site (requires bench to be running).
+
+    This step installs apps that have been cloned but not yet installed.
+    Should be called after bench start.
+
+    Args:
+        config: The realtimex configuration.
+
+    Returns:
+        True if all apps were installed successfully, False otherwise.
+    """
+    for app in config.apps:
+        if not app.install:
+            continue
+
         console.print(f"[blue]Installing {app.name} on {config.site.name}...[/blue]")
         if not install_app(config, app.name):
             console.print(f"[red]✗ Failed to install {app.name}[/red]")

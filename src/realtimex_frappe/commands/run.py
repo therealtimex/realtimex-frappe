@@ -1,5 +1,6 @@
 """Run command - unified setup and start for production use."""
 
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -15,8 +16,10 @@ from ..config.schema import RealtimexConfig
 from ..utils.bench import (
     bench_exists,
     create_site,
+    get_all_apps,
     init_bench,
-    install_all_apps,
+    install_apps_on_site,
+    run_bench_start_subprocess,
     site_exists,
     start_bench,
     update_common_site_config,
@@ -31,20 +34,49 @@ from ..utils.paths import ensure_bench_directory
 console = Console()
 
 
+def wait_for_bench_ready(timeout: int = 60) -> bool:
+    """Wait for bench to be ready (web server available on port 8000).
+
+    Args:
+        timeout: Maximum seconds to wait.
+
+    Returns:
+        True if bench is ready, False if timeout.
+    """
+    import socket
+
+    start_time = time.time()
+    port = 8000
+
+    while time.time() - start_time < timeout:
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex(("127.0.0.1", port))
+            sock.close()
+            if result == 0:
+                return True
+        except Exception:
+            pass
+        time.sleep(2)
+        console.print("[dim]Waiting for bench to be ready...[/dim]")
+
+    return False
+
+
 def run_setup_and_start(config: Optional[RealtimexConfig] = None) -> None:
     """Set up a new Frappe site and start the server.
 
-    This is the primary production command that:
-    1. Validates system prerequisites (git, pkg-config)
+    This command handles the full setup flow:
+    1. Validates system prerequisites (git, pkg-config, wkhtmltopdf)
     2. Reads configuration from environment variables
     3. Validates bundled binaries (node, npm)
     4. Initializes bench (if needed)
-    5. Creates the site (if needed)
-    6. Installs apps (if needed)
-    7. Starts the bench server
-
-    The function uses os.execvpe to replace the current process with
-    the bench server, ensuring proper signal handling.
+    5. Gets apps (clone repositories)
+    6. Creates the site (if needed)
+    7. Starts bench temporarily for app installation
+    8. Installs apps on site (requires Redis to be running)
+    9. Starts the bench server for production
 
     Args:
         config: Optional pre-loaded configuration. If not provided,
@@ -66,13 +98,12 @@ def run_setup_and_start(config: Optional[RealtimexConfig] = None) -> None:
         console.print("\n[yellow]Please install the missing prerequisites and try again.[/yellow]")
         raise SystemExit(1)
 
-    console.print(f"[green]✓[/green] System prerequisites found: {', '.join(prereq_result.available)}")
+    console.print(f"[green]✓[/green] System prerequisites: {', '.join(prereq_result.available)}")
 
     # Step 2: Load configuration from environment
     console.print("\n[bold]Loading configuration...[/bold]")
 
     if config is None:
-        # Check for missing required environment variables
         missing = get_missing_required_env_vars()
         if missing:
             console.print("[red]✗ Missing required environment variables:[/red]")
@@ -86,9 +117,7 @@ def run_setup_and_start(config: Optional[RealtimexConfig] = None) -> None:
 
     console.print(f"  Site: [cyan]{config.site.name}[/cyan]")
     console.print(f"  Bench: [cyan]{config.bench.path}[/cyan]")
-    console.print(
-        f"  Database: [cyan]{config.database.host}:{config.database.port}/{config.database.name}[/cyan]"
-    )
+    console.print(f"  Database: [cyan]{config.database.host}:{config.database.port}/{config.database.name}[/cyan]")
 
     # Step 3: Validate bundled binaries
     console.print("\n[bold]Validating bundled binaries...[/bold]")
@@ -99,15 +128,14 @@ def run_setup_and_start(config: Optional[RealtimexConfig] = None) -> None:
         console.print("\n[yellow]Set REALTIMEX_NODE_BIN_DIR to the path of your Node.js bin directory.[/yellow]")
         raise SystemExit(1)
 
-    console.print(f"[green]✓[/green] Bundled binaries found: {', '.join(binaries_result.available)}")
+    console.print(f"[green]✓[/green] Bundled binaries: {', '.join(binaries_result.available)}")
 
-    # Step 3: Initialize bench (if needed)
+    # Step 4: Initialize bench (if needed)
     console.print("\n[bold]Setting up bench...[/bold]")
 
     if bench_exists(config):
         console.print(f"[green]✓[/green] Using existing bench at {config.bench.path}")
     else:
-        # Ensure the storage directory exists
         ensure_bench_directory()
         console.print("[blue]Initializing new bench...[/blue]")
         if not init_bench(config):
@@ -115,12 +143,20 @@ def run_setup_and_start(config: Optional[RealtimexConfig] = None) -> None:
             raise SystemExit(1)
         console.print("[green]✓[/green] Bench initialized")
 
-    # Step 4: Update common_site_config.json
+    # Step 5: Update common_site_config.json with Redis/DB settings
     console.print("\n[bold]Configuring site settings...[/bold]")
     update_common_site_config(config)
 
-    # Step 5: Create site (if needed)
+    # Step 6: Get apps (clone repositories only, no install yet)
+    if config.apps:
+        console.print("\n[bold]Getting apps...[/bold]")
+        if not get_all_apps(config):
+            console.print("[red]✗ Failed to get apps[/red]")
+            raise SystemExit(1)
+
+    # Step 7: Create site (if needed)
     console.print("\n[bold]Setting up site...[/bold]")
+    needs_app_install = False
 
     if site_exists(config):
         console.print(f"[green]✓[/green] Site {config.site.name} already exists")
@@ -130,16 +166,43 @@ def run_setup_and_start(config: Optional[RealtimexConfig] = None) -> None:
             console.print("[red]✗ Failed to create site[/red]")
             raise SystemExit(1)
         console.print(f"[green]✓[/green] Site created")
+        needs_app_install = True
 
-        # Step 6: Install apps (only for new sites)
-        if config.apps:
-            console.print("\n[bold]Installing apps...[/bold]")
-            if not install_all_apps(config):
-                console.print("[red]✗ Failed to install apps[/red]")
+    # Step 8: Install apps (requires bench to be running for after_install hooks)
+    if needs_app_install and config.apps:
+        console.print("\n[bold]Installing apps...[/bold]")
+        console.print("[dim]Starting bench temporarily for app installation (Redis required)...[/dim]")
+
+        # Start bench as subprocess
+        bench_process = run_bench_start_subprocess(config)
+
+        try:
+            # Wait for bench to be ready
+            if not wait_for_bench_ready(timeout=120):
+                console.print("[red]✗ Timeout waiting for bench to start[/red]")
+                bench_process.terminate()
                 raise SystemExit(1)
+
+            console.print("[green]✓[/green] Bench is ready")
+
+            # Install apps
+            if not install_apps_on_site(config):
+                console.print("[red]✗ Failed to install apps[/red]")
+                bench_process.terminate()
+                raise SystemExit(1)
+
             console.print("[green]✓[/green] Apps installed")
 
-    # Step 7: Start the bench server
+        finally:
+            # Stop the temporary bench process
+            console.print("[dim]Stopping temporary bench...[/dim]")
+            bench_process.terminate()
+            try:
+                bench_process.wait(timeout=10)
+            except Exception:
+                bench_process.kill()
+
+    # Step 9: Start the bench server (final - replaces current process)
     console.print("\n" + "=" * 50)
     console.print(Panel.fit("✅ Setup complete! Starting server...", style="bold green"))
 

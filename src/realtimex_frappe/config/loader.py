@@ -7,6 +7,10 @@ from typing import Optional
 from .schema import AppConfig, RealtimexConfig
 
 
+# Path to the bundled default.json
+DEFAULT_CONFIG_PATH = Path(__file__).parent.parent.parent.parent / "config" / "default.json"
+
+
 def load_config(config_path: str | Path) -> RealtimexConfig:
     """Load configuration from a JSON file."""
     path = Path(config_path)
@@ -21,7 +25,16 @@ def load_config(config_path: str | Path) -> RealtimexConfig:
 
 
 def get_default_config() -> RealtimexConfig:
-    """Get the default configuration."""
+    """Get the default configuration from bundled default.json.
+
+    Loads configuration from the package's config/default.json file,
+    which contains the configured Frappe/ERPNext repositories and branches.
+    Falls back to hardcoded defaults if the file is not found.
+    """
+    if DEFAULT_CONFIG_PATH.exists():
+        return load_config(DEFAULT_CONFIG_PATH)
+
+    # Fallback to hardcoded defaults only if bundled config is missing
     return RealtimexConfig(
         apps=[
             AppConfig(
