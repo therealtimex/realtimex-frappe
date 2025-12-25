@@ -11,12 +11,6 @@
       "url": "https://github.com/therealtimex/erpnext.git",
       "branch": "realtimex/v15.93.0",
       "install": true
-    },
-    {
-      "name": "hrms",
-      "url": "https://github.com/therealtimex/hrms.git",
-      "branch": "realtimex/v15.54.1",
-      "install": true
     }
   ],
   "binaries": {
