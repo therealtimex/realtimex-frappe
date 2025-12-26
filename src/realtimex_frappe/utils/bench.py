@@ -109,6 +109,9 @@ def update_common_site_config(config: RealtimexConfig) -> None:
                 "db_port": config.database.port,
             }
         )
+        # Set db_schema for schema-based isolation (Supabase compatibility)
+        if config.database.schema:
+            site_config["db_schema"] = config.database.schema
 
     # Write config
     with open(config_path, "w") as f:
@@ -116,6 +119,8 @@ def update_common_site_config(config: RealtimexConfig) -> None:
 
     console.print(f"[green]✓[/green] Updated common_site_config.json")
     console.print(f"[dim]  Redis: {redis_url}[/dim]")
+    if config.database.schema:
+        console.print(f"[dim]  DB Schema: {config.database.schema} (schema-based isolation enabled)[/dim]")
     console.print(f"[dim]  DB Host: {config.database.host}:{config.database.port}[/dim]")
 
 

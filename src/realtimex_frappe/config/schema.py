@@ -71,6 +71,9 @@ class DatabaseConfig(BaseModel):
     name: Optional[str] = None
     user: Optional[str] = None
     password: Optional[str] = None
+    schema: Optional[str] = None
+    """PostgreSQL schema name. When set, enables schema-based isolation 
+    (no DROP/CREATE DATABASE). Used for Supabase compatibility."""
 
     @field_validator("host")
     @classmethod
@@ -84,6 +87,24 @@ class DatabaseConfig(BaseModel):
         """Ensure port is valid."""
         if not 1 <= v <= 65535:
             raise ValueError("Port must be between 1 and 65535")
+        return v
+
+    @field_validator("schema")
+    @classmethod
+    def validate_schema(cls, v: Optional[str]) -> Optional[str]:
+        """Validate PostgreSQL schema name."""
+        import re
+        if v is None:
+            return None
+        v = v.strip().lower()
+        if not v:
+            return None
+        if not re.match(r'^[a-z][a-z0-9_]*$', v):
+            raise ValueError("Schema must be lowercase, start with letter, contain only [a-z0-9_]")
+        if v in ('public', 'information_schema') or v.startswith('pg_'):
+            raise ValueError(f"Cannot use reserved schema name: {v}")
+        if len(v) > 63:
+            raise ValueError("Schema name too long (max 63 chars)")
         return v
 
 

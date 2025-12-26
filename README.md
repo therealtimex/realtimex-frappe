@@ -56,7 +56,7 @@ Add this to your RealTimeX Local App configuration:
 }
 ```
 
-**For remote database (e.g., Supabase):**
+**For Supabase (schema-based isolation):**
 ```json
 {
   "command": "uvx",
@@ -64,11 +64,12 @@ Add this to your RealTimeX Local App configuration:
   "env": {
     "REALTIMEX_SITE_NAME": "mysite.localhost",
     "REALTIMEX_ADMIN_PASSWORD": "admin",
-    "REALTIMEX_DB_NAME": "frappe_prod",
+    "REALTIMEX_DB_NAME": "postgres",
     "REALTIMEX_DB_USER": "postgres.xxxx",
     "REALTIMEX_DB_PASSWORD": "your-password",
     "REALTIMEX_DB_HOST": "db.xxxx.supabase.co",
-    "REALTIMEX_DB_PORT": "5432"
+    "REALTIMEX_DB_PORT": "5432",
+    "REALTIMEX_DB_SCHEMA": "frappe_mysite"
   },
   "working_dir": "",
   "port": 8000
@@ -110,9 +111,10 @@ uvx realtimex-frappe run
 |----------|----------|---------|-------------|
 | `REALTIMEX_SITE_NAME` | ✅ | - | Site name (e.g., `mysite.localhost`) |
 | `REALTIMEX_ADMIN_PASSWORD` | ✅ | - | Admin password |
-| `REALTIMEX_DB_NAME` | ✅ | - | Database name |
-| `REALTIMEX_DB_USER` | ✅ | - | PostgreSQL username (root credentials) |
+| `REALTIMEX_DB_NAME` | ✅ | - | Database name to create or connect to |
+| `REALTIMEX_DB_USER` | ✅ | - | PostgreSQL username (root credentials for setup) |
 | `REALTIMEX_DB_PASSWORD` | ✅ | - | PostgreSQL password |
+| `REALTIMEX_DB_SCHEMA` | - | - | PostgreSQL schema name (enables schema mode) |
 | `REALTIMEX_NODE_BIN_DIR` | ⚠️ | - | Path to Node.js bin directory |
 | `REALTIMEX_DB_HOST` | - | `localhost` | PostgreSQL host |
 | `REALTIMEX_DB_PORT` | - | `5432` | PostgreSQL port |
@@ -125,20 +127,41 @@ Run `realtimex-frappe env-help` for the complete list.
 
 ## ⚠️ Database Configuration
 
-> [!CAUTION]
-> **`REALTIMEX_DB_NAME` controls which database Frappe will CREATE.** Use unique, dedicated names.
+### Traditional Mode (Default)
+
+When `REALTIMEX_DB_SCHEMA` is **not set**, Frappe creates a new database:
 
 ```bash
-# ✅ Good: Unique database name
-REALTIMEX_DB_NAME="frappe_mysite_001"
-
-# ❌ Bad: Generic or shared names
-REALTIMEX_DB_NAME="postgres"
+# ✅ Creates database "frappe_mysite" owned by user "frappe_mysite"
+REALTIMEX_DB_NAME="frappe_mysite"
+REALTIMEX_DB_USER="postgres"        # Root user for setup
+REALTIMEX_DB_PASSWORD="postgres"
 ```
 
-**Notes:**
-- `REALTIMEX_DB_USER` and `REALTIMEX_DB_PASSWORD` are used as **root credentials** to create the database
-- For remote databases, ensure the user has `CREATE DATABASE` privileges
+> [!CAUTION]
+> **`REALTIMEX_DB_NAME` controls which database Frappe will CREATE.** Use unique names.
+> **Never use `REALTIMEX_DB_NAME="postgres"` without `REALTIMEX_DB_SCHEMA` otherwise Frappe will drop the `postgres` database.**
+
+### Schema Mode (For Supabase)
+
+When `REALTIMEX_DB_SCHEMA` is **set**, Frappe creates a schema within an existing database:
+
+```bash
+# ✅ Creates schema "frappe_mysite" in the "postgres" database
+REALTIMEX_DB_NAME="postgres"        # Existing database (Supabase default)
+REALTIMEX_DB_USER="postgres.xxxx"   # Your Supabase user
+REALTIMEX_DB_PASSWORD="your-password"
+REALTIMEX_DB_SCHEMA="frappe_mysite" # Schema to create
+```
+
+**Schema mode behavior:**
+- Creates user named after `db_schema` (e.g., `frappe_mysite`)
+- Creates schema owned by this user
+- Grants Supabase roles (`anon`, `authenticated`, `service_role`) if they exist
+- Sets `search_path` automatically on all connections
+
+> [!TIP]
+> Schema mode is ideal for Supabase because it uses the existing `postgres` database and enables Supabase features like Realtime and Edge Functions.
 
 ---
 

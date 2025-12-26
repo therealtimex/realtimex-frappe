@@ -18,6 +18,7 @@ ENV_DB_PORT = f"{ENV_PREFIX}DB_PORT"
 ENV_DB_NAME = f"{ENV_PREFIX}DB_NAME"
 ENV_DB_USER = f"{ENV_PREFIX}DB_USER"
 ENV_DB_PASSWORD = f"{ENV_PREFIX}DB_PASSWORD"
+ENV_DB_SCHEMA = f"{ENV_PREFIX}DB_SCHEMA"
 ENV_REDIS_HOST = f"{ENV_PREFIX}REDIS_HOST"
 ENV_REDIS_PORT = f"{ENV_PREFIX}REDIS_PORT"
 ENV_BENCH_PATH = f"{ENV_PREFIX}BENCH_PATH"
@@ -100,6 +101,8 @@ def config_from_environment() -> RealtimexConfig:
         data["database"]["user"] = db_user
     if db_password := get_env_or_none(ENV_DB_PASSWORD):
         data["database"]["password"] = db_password
+    if db_schema := get_env_or_none(ENV_DB_SCHEMA):
+        data["database"]["schema"] = db_schema
 
     # Redis settings
     if redis_host := get_env_or_none(ENV_REDIS_HOST):
@@ -166,6 +169,7 @@ def print_env_var_help() -> None:
         (ENV_DB_PASSWORD, "Yes", "-", "PostgreSQL password"),
         (ENV_DB_HOST, "No", "localhost", "PostgreSQL host"),
         (ENV_DB_PORT, "No", "5432", "PostgreSQL port"),
+        (ENV_DB_SCHEMA, "No", "-", "PostgreSQL schema (enables schema-based isolation)"),
         (ENV_DB_TYPE, "No", "postgres", "Database type"),
         (ENV_REDIS_HOST, "No", "127.0.0.1", "Redis host"),
         (ENV_REDIS_PORT, "No", "6379", "Redis port"),
