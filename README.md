@@ -74,7 +74,8 @@ Add this to your RealTimeX Local App configuration:
     "REALTIMEX_DB_PASSWORD": "your-password",
     "REALTIMEX_DB_HOST": "db.xxxx.supabase.co",
     "REALTIMEX_DB_PORT": "5432",
-    "REALTIMEX_DB_SCHEMA": "frappe_mysite"
+    "REALTIMEX_DB_SCHEMA": "frappe_mysite",
+    "REALTIMEX_PORT": "8080"
   },
   "working_dir": "",
   "port": 8000
