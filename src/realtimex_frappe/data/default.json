@@ -1,5 +1,4 @@
 {
-  "$schema": "./schema.json",
   "version": "1.0.0",
   "frappe": {
     "branch": "realtimex/v15.93.0",

@@ -11,8 +11,8 @@ from ..utils.paths import get_default_bench_path
 class FrappeConfig(BaseModel):
     """Configuration for Frappe framework."""
 
-    branch: str = "version-15"
-    repo: str = "https://github.com/frappe/frappe.git"
+    branch: str = "realtimex/v15.93.0"
+    repo: str = "https://github.com/therealtimex/frappe.git"
 
 
 class AppConfig(BaseModel):

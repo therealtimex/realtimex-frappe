@@ -1,14 +1,11 @@
 """Configuration file loading and writing utilities."""
 
 import json
+from importlib import resources
 from pathlib import Path
 from typing import Optional
 
-from .schema import AppConfig, RealtimexConfig
-
-
-# Path to the bundled default.json
-DEFAULT_CONFIG_PATH = Path(__file__).parent.parent.parent.parent / "config" / "default.json"
+from .schema import RealtimexConfig
 
 
 def load_config(config_path: str | Path) -> RealtimexConfig:
@@ -27,24 +24,15 @@ def load_config(config_path: str | Path) -> RealtimexConfig:
 def get_default_config() -> RealtimexConfig:
     """Get the default configuration from bundled default.json.
 
-    Loads configuration from the package's config/default.json file,
-    which contains the configured Frappe/ERPNext repositories and branches.
-    Falls back to hardcoded defaults if the file is not found.
+    Uses importlib.resources to reliably load the bundled config file
+    regardless of installation method (uvx, pip, editable install).
     """
-    if DEFAULT_CONFIG_PATH.exists():
-        return load_config(DEFAULT_CONFIG_PATH)
+    from .. import data as data_package
 
-    # Fallback to hardcoded defaults only if bundled config is missing
-    return RealtimexConfig(
-        apps=[
-            AppConfig(
-                name="erpnext",
-                url="https://github.com/frappe/erpnext.git",
-                branch="version-15",
-                install=True,
-            )
-        ]
-    )
+    config_file = resources.files(data_package).joinpath("default.json")
+    config_text = config_file.read_text(encoding="utf-8")
+    config_data = json.loads(config_text)
+    return RealtimexConfig.model_validate(config_data)
 
 
 def write_default_config(output_path: str | Path) -> None:

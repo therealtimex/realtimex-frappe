@@ -95,7 +95,8 @@ class TestConfigLoader:
             # Load it back
             loaded = load_config(config_path)
 
-            assert loaded.frappe.branch == "version-15"
+            # Should use RealTimeX repos from bundled config
+            assert "realtimex" in loaded.frappe.branch
             assert len(loaded.apps) == 1
             assert loaded.apps[0].name == "erpnext"
 
@@ -108,7 +109,8 @@ class TestConfigLoader:
         """Test getting default config."""
         config = get_default_config()
 
-        assert config.frappe.branch == "version-15"
+        # Should use RealTimeX repos from bundled config
+        assert "realtimex" in config.frappe.branch
         assert len(config.apps) == 1
         assert config.apps[0].name == "erpnext"
 
@@ -165,3 +167,58 @@ class TestAppConfig:
 
         assert app.url == "https://github.com/myorg/erpnext-fork.git"
         assert app.branch == "custom-branch"
+
+
+class TestBundledConfigLoading:
+    """Tests for bundled config loading (uvx/pip installation support)."""
+
+    def test_get_default_config_uses_realtimex_repos(self):
+        """Verify bundled config uses RealTimeX forks, not upstream."""
+        config = get_default_config()
+
+        # Frappe should use RealTimeX fork
+        assert "therealtimex" in config.frappe.repo
+        assert config.frappe.repo == "https://github.com/therealtimex/frappe.git"
+        assert "realtimex" in config.frappe.branch
+
+        # ERPNext should use RealTimeX fork
+        assert len(config.apps) >= 1
+        erpnext_app = next(app for app in config.apps if app.name == "erpnext")
+        assert "therealtimex" in erpnext_app.url
+        assert erpnext_app.url == "https://github.com/therealtimex/erpnext.git"
+
+    def test_get_default_config_works_from_any_directory(self):
+        """Ensure config loading works regardless of current working directory.
+
+        This reproduces the uvx failure where running from an arbitrary
+        directory caused the config file to not be found.
+        """
+        import os
+        import tempfile
+
+        original_cwd = os.getcwd()
+
+        try:
+            # Change to a completely unrelated directory
+            with tempfile.TemporaryDirectory() as tmpdir:
+                os.chdir(tmpdir)
+
+                # This should still work and return RealTimeX repos
+                config = get_default_config()
+
+                assert "therealtimex" in config.frappe.repo
+                assert len(config.apps) >= 1
+        finally:
+            os.chdir(original_cwd)
+
+    def test_bundled_config_not_using_upstream_fallback(self):
+        """Ensure we're not hitting hardcoded upstream fallback."""
+        config = get_default_config()
+
+        # These would indicate we're using the old fallback
+        assert config.frappe.repo != "https://github.com/frappe/frappe.git"
+        for app in config.apps:
+            if app.name == "erpnext":
+                assert app.url != "https://github.com/frappe/erpnext.git"
+                assert app.branch != "version-15"
+
