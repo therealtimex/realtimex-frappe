@@ -28,7 +28,7 @@ class TestRealtimexConfig:
         config = RealtimexConfig()
 
         assert config.version == "1.0.0"
-        assert config.frappe.branch == "version-15"
+        assert config.frappe.branch == "realtimex/v15.93.0"
         assert config.database.type == "postgres"
         assert config.redis.port == 6379
 
@@ -128,7 +128,7 @@ class TestConfigLoader:
         assert merged.database.name == "testdb"
 
         # Other values should be defaults
-        assert merged.frappe.branch == "version-15"
+        assert merged.frappe.branch == "realtimex/v15.93.0"
 
     def test_merge_with_none_config(self):
         """Test merging when no config file is provided."""
