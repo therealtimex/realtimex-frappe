@@ -475,7 +475,7 @@ def start_bench(config: RealtimexConfig) -> None:
     env = build_environment(config)
 
     console.print(f"\n[bold green]Starting bench at {bench_path}...[/bold green]")
-    console.print(f"[dim]Site will be available at: http://{config.site.name}:8000[/dim]\n")
+    console.print(f"[dim]Site will be available at: http://{config.site.name}:{config.bench.port}[/dim]\n")
 
     # Change to bench directory and exec bench start
     os.chdir(bench_path)
@@ -498,7 +498,7 @@ def run_bench_start_subprocess(config: RealtimexConfig) -> subprocess.Popen:
     env = build_environment(config)
 
     console.print(f"\n[bold green]Starting bench at {bench_path}...[/bold green]")
-    console.print(f"[dim]Site will be available at: http://{config.site.name}:8000[/dim]\n")
+    console.print(f"[dim]Site will be available at: http://{config.site.name}:{config.bench.port}[/dim]\n")
 
     return subprocess.Popen(
         ["bench", "start"],

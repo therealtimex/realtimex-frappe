@@ -35,10 +35,11 @@ from ..utils.paths import ensure_bench_directory
 console = Console()
 
 
-def wait_for_bench_ready(timeout: int = 60) -> bool:
-    """Wait for bench to be ready (web server available on port 8000).
+def wait_for_bench_ready(port: int = 8000, timeout: int = 60) -> bool:
+    """Wait for bench to be ready (web server available on specified port).
 
     Args:
+        port: The port to check for webserver availability.
         timeout: Maximum seconds to wait.
 
     Returns:
@@ -47,7 +48,6 @@ def wait_for_bench_ready(timeout: int = 60) -> bool:
     import socket
 
     start_time = time.time()
-    port = 8000
 
     while time.time() - start_time < timeout:
         try:
@@ -190,7 +190,7 @@ def run_setup_and_start(config: Optional[RealtimexConfig] = None) -> None:
 
         try:
             # Wait for bench to be ready
-            if not wait_for_bench_ready(timeout=120):
+            if not wait_for_bench_ready(port=config.bench.port, timeout=120):
                 console.print("[red]✗ Timeout waiting for bench to start[/red]")
                 bench_process.terminate()
                 raise SystemExit(1)
