@@ -13,13 +13,18 @@ A CLI tool to set up Frappe/ERPNext sites with PostgreSQL, external Redis, and b
 
 ### Step 1: Install Prerequisites
 
-| Prerequisite | Check Command | macOS Install |
-|--------------|---------------|---------------|
-| **Git** | `git --version` | `xcode-select --install` |
-| **Node.js 18+** | `node --version` | `brew install node@18` or bundled |
-| **pkg-config** | `which pkg-config` | `xcode-select --install` |
-| **wkhtmltopdf** | `wkhtmltopdf --version` | See below |
-| **Redis** | `redis-cli ping` | `brew install redis && brew services start redis` |
+| Prerequisite | Check Command | macOS Install | RealTimeX App |
+|--------------|---------------|---------------|:-------------:|
+| **Git** | `git --version` | `brew install git` | - |
+| **Node.js 18+** | `node --version` | `brew install node@18` | ✅ |
+| **npm** | `npm --version` | (included with Node.js) | ✅ |
+| **pkg-config** | `which pkg-config` | `brew install pkg-config` | - |
+| **wkhtmltopdf** | `wkhtmltopdf --version` | See below | - |
+| **Redis** | `which redis-server` | `brew install redis && brew services start redis` | - |
+| **psql** | `psql --version` | `brew install postgresql@15` | - |
+
+> [!NOTE]
+> ✅ = Bundled with RealTimeX App (no manual installation required)
 
 **wkhtmltopdf (macOS):**
 ```bash
@@ -118,7 +123,10 @@ uvx realtimex-frappe run
 | `REALTIMEX_NODE_BIN_DIR` | ⚠️ | - | Path to Node.js bin directory |
 | `REALTIMEX_DB_HOST` | - | `localhost` | PostgreSQL host |
 | `REALTIMEX_DB_PORT` | - | `5432` | PostgreSQL port |
+| `REALTIMEX_PORT` | - | `8000` | Webserver port |
 | `REALTIMEX_REDIS_HOST` | - | `127.0.0.1` | Redis host |
+| `REALTIMEX_REDIS_CACHE_PORT` | - | `13001` | Redis cache port |
+| `REALTIMEX_REDIS_QUEUE_PORT` | - | `11001` | Redis queue port |
 | `REALTIMEX_BENCH_PATH` | - | `~/.realtimex.ai/storage/local-apps/frappe-bench` | Bench installation path |
 
 Run `realtimex-frappe env-help` for the complete list.
@@ -165,6 +173,26 @@ REALTIMEX_DB_SCHEMA="frappe_mysite" # Schema to create
 
 ---
 
+## Port Configuration
+
+Control all ports via environment variables:
+
+| Service | Variable | Default |
+|---------|----------|---------|
+| Webserver | `REALTIMEX_PORT` | `8000` |
+| Redis Cache | `REALTIMEX_REDIS_CACHE_PORT` | `13001` |
+| Redis Queue | `REALTIMEX_REDIS_QUEUE_PORT` | `11001` |
+
+**Example with custom ports:**
+```bash
+export REALTIMEX_PORT=3000
+export REALTIMEX_REDIS_CACHE_PORT=13002
+export REALTIMEX_REDIS_QUEUE_PORT=11002
+uvx realtimex-frappe run
+```
+
+---
+
 ## Storage Location
 
 Bench data is stored persistently at:
@@ -188,6 +216,9 @@ sudo apt install redis-server && sudo systemctl enable --now redis-server
 
 # PostgreSQL (skip if using remote database)
 sudo apt install postgresql postgresql-contrib && sudo systemctl enable --now postgresql
+
+# PostgreSQL client
+sudo apt install postgresql-client
 
 # wkhtmltopdf dependencies
 sudo apt install xvfb libfontconfig
@@ -215,7 +246,7 @@ sudo apt install nodejs
 - Node.js 18+
 - Redis 6+
 - PostgreSQL 13+ (local or remote)
-- Git, pkg-config, wkhtmltopdf
+- Git, pkg-config, wkhtmltopdf, psql
 
 ---
 

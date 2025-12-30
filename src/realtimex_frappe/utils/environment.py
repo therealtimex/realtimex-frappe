@@ -128,7 +128,7 @@ SYSTEM_PREREQUISITES = {
         "required": True,
         "description": "Git version control system",
         "install_hint": {
-            "darwin": "xcode-select --install",
+            "darwin": "brew install git",
             "linux": "sudo apt install git",
         },
     },
@@ -136,7 +136,7 @@ SYSTEM_PREREQUISITES = {
         "required": True,
         "description": "Package config tool (required for building Python packages)",
         "install_hint": {
-            "darwin": "xcode-select --install",
+            "darwin": "brew install pkg-config",
             "linux": "sudo apt install pkg-config",
         },
     },
@@ -153,6 +153,22 @@ SYSTEM_PREREQUISITES = {
                 "    Download .deb from https://wkhtmltopdf.org/downloads.html\n"
                 "    Then: sudo dpkg -i wkhtmltox_*.deb"
             ),
+        },
+    },
+    "redis-server": {
+        "required": True,
+        "description": "Redis server (required for caching and queues)",
+        "install_hint": {
+            "darwin": "brew install redis && brew services start redis",
+            "linux": "sudo apt install redis-server && sudo systemctl enable --now redis-server",
+        },
+    },
+    "psql": {
+        "required": False,
+        "description": "PostgreSQL client (for database management)",
+        "install_hint": {
+            "darwin": "brew install postgresql@15",
+            "linux": "sudo apt install postgresql-client",
         },
     },
 }
