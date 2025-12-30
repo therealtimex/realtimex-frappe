@@ -52,14 +52,22 @@ class RedisConfig(BaseModel):
     """Configuration for Redis connection."""
 
     host: str = "127.0.0.1"
-    port: int = 6379
-    use_external: bool = True
-    """When True, skip Redis config generation and use external Redis."""
+    cache_port: int = 13001
+    """Port for Redis cache (redis_cache in Frappe)."""
+    queue_port: int = 11001
+    """Port for Redis queue (redis_queue in Frappe)."""
+    use_external: bool = False
+    """When True, skip starting Redis in Procfile (use existing running Redis)."""
 
     @property
-    def url(self) -> str:
-        """Get Redis URL in the format expected by Frappe."""
-        return f"redis://{self.host}:{self.port}"
+    def cache_url(self) -> str:
+        """Get Redis cache URL in the format expected by Frappe."""
+        return f"redis://{self.host}:{self.cache_port}"
+
+    @property
+    def queue_url(self) -> str:
+        """Get Redis queue URL in the format expected by Frappe."""
+        return f"redis://{self.host}:{self.queue_port}"
 
 
 class DatabaseConfig(BaseModel):
@@ -119,6 +127,8 @@ class BenchConfig(BaseModel):
     """Configuration for the bench installation."""
 
     path: str = Field(default_factory=get_default_bench_path)
+    port: int = 8000
+    """Webserver port for bench serve."""
     developer_mode: bool = True
     version: Optional[str] = None
     """Pinned bench version (e.g., 'v15.93.0'). If None, uses latest."""
@@ -129,6 +139,14 @@ class BenchConfig(BaseModel):
         """Use default path if null or empty is provided."""
         if v is None or (isinstance(v, str) and not v.strip()):
             return get_default_bench_path()
+        return v
+
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, v: int) -> int:
+        """Ensure port is valid."""
+        if not 1 <= v <= 65535:
+            raise ValueError("Port must be between 1 and 65535")
         return v
 
 

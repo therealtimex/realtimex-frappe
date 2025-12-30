@@ -23,7 +23,8 @@
   },
   "redis": {
     "host": "127.0.0.1",
-    "port": 6379,
+    "cache_port": 13001,
+    "queue_port": 11001,
     "use_external": true
   },
   "database": {
@@ -40,6 +41,7 @@
   },
   "bench": {
     "path": null,
+    "port": 8000,
     "developer_mode": true,
     "version": "v15.93.0"
   }

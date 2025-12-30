@@ -20,8 +20,10 @@ ENV_DB_USER = f"{ENV_PREFIX}DB_USER"
 ENV_DB_PASSWORD = f"{ENV_PREFIX}DB_PASSWORD"
 ENV_DB_SCHEMA = f"{ENV_PREFIX}DB_SCHEMA"
 ENV_REDIS_HOST = f"{ENV_PREFIX}REDIS_HOST"
-ENV_REDIS_PORT = f"{ENV_PREFIX}REDIS_PORT"
+ENV_REDIS_CACHE_PORT = f"{ENV_PREFIX}REDIS_CACHE_PORT"
+ENV_REDIS_QUEUE_PORT = f"{ENV_PREFIX}REDIS_QUEUE_PORT"
 ENV_BENCH_PATH = f"{ENV_PREFIX}BENCH_PATH"
+ENV_PORT = f"{ENV_PREFIX}PORT"
 ENV_NODE_BIN_DIR = f"{ENV_PREFIX}NODE_BIN_DIR"
 ENV_WKHTMLTOPDF_BIN_DIR = f"{ENV_PREFIX}WKHTMLTOPDF_BIN_DIR"
 ENV_FRAPPE_BRANCH = f"{ENV_PREFIX}FRAPPE_BRANCH"
@@ -107,12 +109,16 @@ def config_from_environment() -> RealtimexConfig:
     # Redis settings
     if redis_host := get_env_or_none(ENV_REDIS_HOST):
         data["redis"]["host"] = redis_host
-    if redis_port := get_env_int(ENV_REDIS_PORT):
-        data["redis"]["port"] = redis_port
+    if redis_cache_port := get_env_int(ENV_REDIS_CACHE_PORT):
+        data["redis"]["cache_port"] = redis_cache_port
+    if redis_queue_port := get_env_int(ENV_REDIS_QUEUE_PORT):
+        data["redis"]["queue_port"] = redis_queue_port
 
     # Bench settings
     if bench_path := get_env_or_none(ENV_BENCH_PATH):
         data["bench"]["path"] = bench_path
+    if bench_port := get_env_int(ENV_PORT):
+        data["bench"]["port"] = bench_port
     data["bench"]["developer_mode"] = get_env_bool(ENV_DEVELOPER_MODE, default=True)
 
     # Binary paths

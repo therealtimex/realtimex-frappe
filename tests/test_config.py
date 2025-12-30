@@ -30,15 +30,18 @@ class TestRealtimexConfig:
         assert config.version == "1.0.0"
         assert config.frappe.branch == "realtimex/v15.93.0"
         assert config.database.type == "postgres"
-        assert config.redis.port == 6379
+        assert config.redis.cache_port == 13001
+        assert config.redis.queue_port == 11001
 
     def test_redis_url_property(self):
         """Test Redis URL generation."""
-        redis = RedisConfig(host="localhost", port=6379)
-        assert redis.url == "redis://localhost:6379"
+        redis = RedisConfig(host="localhost", cache_port=6379, queue_port=6380)
+        assert redis.cache_url == "redis://localhost:6379"
+        assert redis.queue_url == "redis://localhost:6380"
 
-        redis = RedisConfig(host="192.168.1.100", port=6380)
-        assert redis.url == "redis://192.168.1.100:6380"
+        redis = RedisConfig(host="192.168.1.100", cache_port=13001, queue_port=11001)
+        assert redis.cache_url == "redis://192.168.1.100:13001"
+        assert redis.queue_url == "redis://192.168.1.100:11001"
 
     def test_database_validation(self):
         """Test database port validation."""

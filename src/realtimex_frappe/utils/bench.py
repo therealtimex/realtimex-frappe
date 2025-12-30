@@ -71,11 +71,14 @@ def init_bench(config: RealtimexConfig) -> bool:
 
 
 def update_common_site_config(config: RealtimexConfig) -> None:
-    """Update common_site_config.json with Redis and DB settings.
+    """Update common_site_config.json with Redis, DB, and port settings.
 
     Writes directly to the JSON file rather than using 'bench config'
     command, which fails on Redis URLs containing '://' due to
     ast.literal_eval in the bench library.
+
+    After writing the config, regenerates derived config files (Procfile,
+    redis configs) to ensure they match.
 
     Args:
         config: The realtimex configuration.
@@ -89,17 +92,22 @@ def update_common_site_config(config: RealtimexConfig) -> None:
         with open(config_path) as f:
             site_config = json.load(f)
 
-    # Set Redis URLs
-    redis_url = config.redis.url
-    console.print(f"[dim]Setting Redis URL: {redis_url}[/dim]")
+    # Set Redis URLs (separate ports for cache and queue)
+    cache_url = config.redis.cache_url
+    queue_url = config.redis.queue_url
+    console.print(f"[dim]Setting Redis cache URL: {cache_url}[/dim]")
+    console.print(f"[dim]Setting Redis queue URL: {queue_url}[/dim]")
 
     site_config.update(
         {
-            "redis_cache": redis_url,
-            "redis_queue": redis_url,
-            "redis_socketio": redis_url,
+            "redis_cache": cache_url,
+            "redis_queue": queue_url,
+            "redis_socketio": cache_url,  # socketio uses cache port
         }
     )
+
+    # Set webserver port
+    site_config["webserver_port"] = config.bench.port
 
     # Set PostgreSQL config
     if config.database.type == "postgres":
@@ -118,10 +126,54 @@ def update_common_site_config(config: RealtimexConfig) -> None:
         json.dump(site_config, f, indent=2)
 
     console.print(f"[green]✓[/green] Updated common_site_config.json")
-    console.print(f"[dim]  Redis: {redis_url}[/dim]")
+    console.print(f"[dim]  Redis cache: {cache_url}[/dim]")
+    console.print(f"[dim]  Redis queue: {queue_url}[/dim]")
+    console.print(f"[dim]  Port: {config.bench.port}[/dim]")
     if config.database.schema:
         console.print(f"[dim]  DB Schema: {config.database.schema} (schema-based isolation enabled)[/dim]")
     console.print(f"[dim]  DB Host: {config.database.host}:{config.database.port}[/dim]")
+
+    # Regenerate derived config files to match common_site_config.json
+    regenerate_bench_config(config)
+
+
+def regenerate_bench_config(config: RealtimexConfig) -> None:
+    """Regenerate Bench config files after updating common_site_config.json.
+
+    This ensures:
+    - Procfile has correct webserver_port and includes Redis
+    - Redis .conf files have correct ports (if not using external Redis)
+
+    Uses Bench's built-in functions for best practice compliance.
+
+    Args:
+        config: The realtimex configuration.
+    """
+    from bench.config.procfile import setup_procfile
+
+    bench_path = config.bench.path
+
+    # Regenerate Redis configs if not using external Redis
+    # When use_external=True, we use the external Redis URL from config
+    # but still include Redis in Procfile for local development
+    if not config.redis.use_external:
+        from bench.config.redis import generate_config as generate_redis_config
+        console.print("[dim]Regenerating Redis configs...[/dim]")
+        generate_redis_config(bench_path)
+    else:
+        # For external Redis, still regenerate configs to match the URL
+        from bench.config.redis import generate_config as generate_redis_config
+        console.print("[dim]Regenerating Redis configs for external Redis...[/dim]")
+        generate_redis_config(bench_path)
+
+    # Always include Redis in Procfile - bench manages Redis startup
+    # skip_redis=False means Redis will be started by bench
+    console.print("[dim]Regenerating Procfile...[/dim]")
+    setup_procfile(bench_path, yes=True, skip_redis=False)
+
+    console.print(f"[green]✓[/green] Regenerated Bench config files")
+
+
 
 
 def create_site(config: RealtimexConfig, force: bool = False) -> bool:
