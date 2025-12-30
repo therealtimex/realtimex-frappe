@@ -124,7 +124,7 @@ def update_common_site_config(config: RealtimexConfig) -> None:
     console.print(f"[dim]  DB Host: {config.database.host}:{config.database.port}[/dim]")
 
 
-def create_site(config: RealtimexConfig) -> bool:
+def create_site(config: RealtimexConfig, force: bool = False) -> bool:
     """Create a new Frappe site.
 
     Uses provided credentials as root credentials to create the database
@@ -135,6 +135,7 @@ def create_site(config: RealtimexConfig) -> bool:
 
     Args:
         config: The realtimex configuration.
+        force: If True, recreate site even if it exists (for recovery).
 
     Returns:
         True if site creation succeeded, False otherwise.
@@ -155,6 +156,10 @@ def create_site(config: RealtimexConfig) -> bool:
         "--admin-password",
         config.site.admin_password,
     ]
+
+    # Force recreate if recovering from partial state
+    if force:
+        args.append("--force")
 
     # Database type
     if config.database.type:
@@ -343,7 +348,7 @@ def bench_exists(config: RealtimexConfig) -> bool:
 
 
 def site_exists(config: RealtimexConfig) -> bool:
-    """Check if the site already exists.
+    """Check if the site directory exists.
 
     Args:
         config: The realtimex configuration.
@@ -358,6 +363,48 @@ def site_exists(config: RealtimexConfig) -> bool:
     site_path = bench_path / "sites" / config.site.name
 
     return site_path.exists()
+
+
+def site_is_healthy(config: RealtimexConfig) -> tuple[bool, str]:
+    """Check if site is properly configured.
+
+    Performs multi-level validation:
+    1. Site directory exists
+    2. site_config.json exists and is valid JSON
+    3. site_config.json contains required db_name field
+
+    Args:
+        config: The realtimex configuration.
+
+    Returns:
+        Tuple of (is_healthy, reason).
+        Reasons: 'healthy', 'not_found', 'missing_config', 'invalid_config', 'incomplete_config'
+    """
+    if not config.site.name:
+        return False, "not_found"
+
+    bench_path = Path(config.bench.path)
+    site_path = bench_path / "sites" / config.site.name
+
+    # Level 1: Site directory exists
+    if not site_path.exists():
+        return False, "not_found"
+
+    # Level 2: site_config.json exists
+    config_file = site_path / "site_config.json"
+    if not config_file.exists():
+        return False, "missing_config"
+
+    # Level 3: site_config.json is valid and has db_name
+    try:
+        with open(config_file) as f:
+            site_cfg = json.load(f)
+        if not site_cfg.get("db_name"):
+            return False, "incomplete_config"
+    except (json.JSONDecodeError, OSError):
+        return False, "invalid_config"
+
+    return True, "healthy"
 
 
 def start_bench(config: RealtimexConfig) -> None:

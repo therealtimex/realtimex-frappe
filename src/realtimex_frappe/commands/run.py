@@ -21,6 +21,7 @@ from ..utils.bench import (
     install_apps_on_site,
     run_bench_start_subprocess,
     site_exists,
+    site_is_healthy,
     start_bench,
     update_common_site_config,
 )
@@ -154,18 +155,29 @@ def run_setup_and_start(config: Optional[RealtimexConfig] = None) -> None:
             console.print("[red]✗ Failed to get apps[/red]")
             raise SystemExit(1)
 
-    # Step 7: Create site (if needed)
+    # Step 7: Create site (if needed) or repair if in partial state
     console.print("\n[bold]Setting up site...[/bold]")
     needs_app_install = False
 
-    if site_exists(config):
-        console.print(f"[green]✓[/green] Site {config.site.name} already exists")
-    else:
-        console.print(f"[blue]Creating site {config.site.name}...[/blue]")
+    healthy, reason = site_is_healthy(config)
+
+    if healthy:
+        console.print(f"[green]✓[/green] Site {config.site.name} is healthy")
+    elif reason == "not_found":
+        # Fresh install
+        console.print(f"[blue]Creating new site {config.site.name}...[/blue]")
         if not create_site(config):
             console.print("[red]✗ Failed to create site[/red]")
             raise SystemExit(1)
         console.print(f"[green]✓[/green] Site created")
+        needs_app_install = True
+    else:
+        # Partial state detected - repair with --force
+        console.print(f"[yellow]⚠[/yellow] Site in partial state ({reason}), repairing...")
+        if not create_site(config, force=True):
+            console.print("[red]✗ Failed to repair site[/red]")
+            raise SystemExit(1)
+        console.print(f"[green]✓[/green] Site repaired")
         needs_app_install = True
 
     # Step 8: Install apps (requires bench to be running for after_install hooks)
