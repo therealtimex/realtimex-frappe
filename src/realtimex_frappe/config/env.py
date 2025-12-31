@@ -11,7 +11,7 @@ ENV_PREFIX = "REALTIMEX_"
 
 # Environment variable names
 ENV_SITE_NAME = f"{ENV_PREFIX}SITE_NAME"
-ENV_ADMIN_PASSWORD = f"{ENV_PREFIX}ADMIN_PASSWORD"
+ENV_SITE_PASSWORD = f"{ENV_PREFIX}SITE_PASSWORD"
 ENV_DB_TYPE = f"{ENV_PREFIX}DB_TYPE"
 ENV_DB_HOST = f"{ENV_PREFIX}DB_HOST"
 ENV_DB_PORT = f"{ENV_PREFIX}DB_PORT"
@@ -87,8 +87,8 @@ def config_from_environment() -> RealtimexConfig:
     # Site settings
     if site_name := get_env_or_none(ENV_SITE_NAME):
         data["site"]["name"] = site_name
-    if admin_password := get_env_or_none(ENV_ADMIN_PASSWORD):
-        data["site"]["admin_password"] = admin_password
+    if site_password := get_env_or_none(ENV_SITE_PASSWORD):
+        data["site"]["site_password"] = site_password
 
     # Database settings
     if db_type := get_env_or_none(ENV_DB_TYPE):
@@ -169,7 +169,7 @@ def print_env_var_help() -> None:
 
     env_vars = [
         (ENV_SITE_NAME, "Yes", "-", "Site name (e.g., mysite.localhost)"),
-        (ENV_ADMIN_PASSWORD, "Yes", "-", "Administrator password"),
+        (ENV_SITE_PASSWORD, "Admin", "-", "Frappe Administrator password (required in admin mode)"),
         (ENV_DB_NAME, "Yes", "-", "PostgreSQL database name"),
         (ENV_DB_USER, "Yes", "-", "PostgreSQL username"),
         (ENV_DB_PASSWORD, "Yes", "-", "PostgreSQL password"),

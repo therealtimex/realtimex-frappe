@@ -206,7 +206,7 @@ def create_site(config: RealtimexConfig, force: bool = False) -> bool:
         "new-site",
         config.site.name,
         "--admin-password",
-        config.site.admin_password,
+        config.site.site_password,
     ]
 
     # Force recreate if recovering from partial state

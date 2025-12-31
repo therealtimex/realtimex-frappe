@@ -59,7 +59,7 @@ def write_config(config: RealtimexConfig, output_path: str | Path) -> None:
 def merge_config_with_cli(
     config: Optional[RealtimexConfig],
     site_name: Optional[str] = None,
-    admin_password: Optional[str] = None,
+    site_password: Optional[str] = None,
     db_host: Optional[str] = None,
     db_port: Optional[int] = None,
     db_name: Optional[str] = None,
@@ -75,7 +75,7 @@ def merge_config_with_cli(
 
     return base_config.with_overrides(
         site_name=site_name,
-        admin_password=admin_password,
+        site_password=site_password,
         db_host=db_host,
         db_port=db_port,
         db_name=db_name,

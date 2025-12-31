@@ -120,7 +120,8 @@ class SiteConfig(BaseModel):
     """Configuration for the Frappe site."""
 
     name: Optional[str] = None
-    admin_password: Optional[str] = None
+    site_password: Optional[str] = None
+    """Password for the Frappe Administrator user (NOT the database)."""
 
 
 class BenchConfig(BaseModel):
@@ -165,7 +166,7 @@ class RealtimexConfig(BaseModel):
     def with_overrides(
         self,
         site_name: Optional[str] = None,
-        admin_password: Optional[str] = None,
+        site_password: Optional[str] = None,
         db_host: Optional[str] = None,
         db_port: Optional[int] = None,
         db_name: Optional[str] = None,
@@ -178,8 +179,8 @@ class RealtimexConfig(BaseModel):
 
         if site_name is not None:
             data["site"]["name"] = site_name
-        if admin_password is not None:
-            data["site"]["admin_password"] = admin_password
+        if site_password is not None:
+            data["site"]["site_password"] = site_password
         if db_host is not None:
             data["database"]["host"] = db_host
         if db_port is not None:
