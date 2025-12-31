@@ -50,25 +50,7 @@ def run_setup(config: Optional[RealtimexConfig] = None) -> None:
         Panel.fit("🔧 Realtimex Frappe Setup (Admin Mode)", style="bold blue")
     )
 
-    # Step 1: Validate system prerequisites
-    console.print("\n[bold]Checking system prerequisites...[/bold]")
-
-    prereqs, _ = validate_all_prerequisites(None)
-    if not prereqs.is_valid:
-        console.print(
-            f"[red]✗ Missing required prerequisites: {', '.join(prereqs.missing)}[/red]"
-        )
-        for prereq in prereqs.missing:
-            hint = get_prerequisite_install_hint(prereq)
-            if hint:
-                console.print(f"  [yellow]Install {prereq}: {hint}[/yellow]")
-        raise SystemExit(1)
-
-    console.print(
-        f"[green]✓[/green] System prerequisites: {', '.join(prereqs.available)}"
-    )
-
-    # Step 2: Load configuration from environment
+    # Step 1: Load configuration from environment
     console.print("\n[bold]Loading configuration...[/bold]")
 
     if config is None:
@@ -103,13 +85,27 @@ def run_setup(config: Optional[RealtimexConfig] = None) -> None:
     console.print(f"  Schema: [cyan]{config.database.schema}[/cyan]")
     console.print(f"  Admin DB User: [cyan]{config.database.admin_user}[/cyan]")
 
-    # Step 3: Validate bundled binaries
-    console.print("\n[bold]Validating bundled binaries...[/bold]")
+    # Step 2: Validate system and bundled prerequisites
+    console.print("\n[bold]Validating prerequisites...[/bold]")
 
-    _, binaries_result = validate_all_prerequisites(config)
+    prereqs, binaries_result = validate_all_prerequisites(config)
+    if not prereqs.is_valid:
+        console.print(
+            f"[red]✗ Missing system prerequisites: {', '.join(prereqs.missing)}[/red]"
+        )
+        for prereq in prereqs.missing:
+            hint = get_prerequisite_install_hint(prereq)
+            if hint:
+                console.print(f"  [yellow]Install {prereq}: {hint}[/yellow]")
+        raise SystemExit(1)
+
+    console.print(
+        f"[green]✓[/green] System prerequisites: {', '.join(prereqs.available)}"
+    )
+
     if not binaries_result.is_valid:
         console.print(
-            f"[red]✗ Missing required binaries: {', '.join(binaries_result.missing)}[/red]"
+            f"[red]✗ Missing bundled binaries: {', '.join(binaries_result.missing)}[/red]"
         )
         console.print(
             "\n[yellow]Set REALTIMEX_NODE_BIN_DIR to the path of your Node.js bin directory.[/yellow]"
