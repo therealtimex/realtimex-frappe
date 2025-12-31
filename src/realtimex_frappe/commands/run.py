@@ -12,7 +12,7 @@ from ..config.env import (
     get_missing_required_env_vars,
     print_env_var_help,
 )
-from ..config.schema import RealtimexConfig
+from ..config.schema import RealtimexConfig, RunMode
 from ..utils.bench import (
     bench_exists,
     create_site,
@@ -116,6 +116,7 @@ def run_setup_and_start(config: Optional[RealtimexConfig] = None) -> None:
 
         config = config_from_environment()
 
+    console.print(f"  Mode: [cyan]{config.mode.value}[/cyan]")
     console.print(f"  Site: [cyan]{config.site.name}[/cyan]")
     console.print(f"  Bench: [cyan]{config.bench.path}[/cyan]")
     console.print(f"  Database: [cyan]{config.database.host}:{config.database.port}/{config.database.name}[/cyan]")
@@ -143,6 +144,29 @@ def run_setup_and_start(config: Optional[RealtimexConfig] = None) -> None:
             console.print("[red]✗ Failed to initialize bench[/red]")
             raise SystemExit(1)
         console.print("[green]✓[/green] Bench initialized")
+
+    # User mode: skip site creation and migrations, just configure and start
+    if config.mode == RunMode.USER:
+        console.print("\n[bold]User mode: Skipping site creation and migrations...[/bold]")
+
+        # Ensure site directory and config exist (may have been set up by admin on remote)
+        if not site_exists(config):
+            console.print(f"[red]✗ Site {config.site.name} not found in bench.[/red]")
+            console.print("[yellow]Run in admin mode first to create the site.[/yellow]")
+            raise SystemExit(1)
+
+        healthy, reason = site_is_healthy(config)
+        if not healthy:
+            console.print(f"[yellow]⚠ Site check: {reason}[/yellow]")
+
+        console.print(f"[green]✓[/green] Site {config.site.name} found")
+        update_common_site_config(config)
+        console.print("[green]✓[/green] Configuration updated")
+
+        # Start bench
+        console.print("\n[bold]Starting bench...[/bold]")
+        start_bench(config)
+        return
 
     # Step 5: Update common_site_config.json with Redis/DB settings
     console.print("\n[bold]Configuring site settings...[/bold]")

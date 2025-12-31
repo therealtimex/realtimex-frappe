@@ -233,34 +233,24 @@ def new_site(
 
 @main.command("run")
 def run():
-    """Set up and start a Frappe site (production mode).
+    """Start a Frappe site (user mode).
 
-    This is the primary command for production use. It reads configuration
-    from environment variables, sets up the site if needed, and starts the
-    bench server.
+    This command starts an existing Frappe site. For initial setup,
+    use 'realtimex-frappe setup' first.
 
     Required environment variables:
+        REALTIMEX_MODE: Set to 'user' for run-only mode
         REALTIMEX_SITE_NAME: Site name (e.g., mysite.localhost)
-        REALTIMEX_ADMIN_PASSWORD: Administrator password
         REALTIMEX_DB_NAME: PostgreSQL database name
         REALTIMEX_DB_USER: PostgreSQL username
         REALTIMEX_DB_PASSWORD: PostgreSQL password
 
-    Optional environment variables:
-        REALTIMEX_DB_HOST: PostgreSQL host (default: localhost)
-        REALTIMEX_DB_PORT: PostgreSQL port (default: 5432)
-        REALTIMEX_REDIS_HOST: Redis host (default: 127.0.0.1)
-        REALTIMEX_REDIS_PORT: Redis port (default: 6379)
-        REALTIMEX_BENCH_PATH: Bench path (default: ./frappe-bench)
-        REALTIMEX_NODE_BIN_DIR: Path to Node.js bin directory
-        REALTIMEX_FRAPPE_BRANCH: Frappe branch (default: version-15)
-
     Example:
+        REALTIMEX_MODE=user \\
         REALTIMEX_SITE_NAME=mysite.localhost \\
-        REALTIMEX_ADMIN_PASSWORD=secret \\
         REALTIMEX_DB_NAME=mysite \\
-        REALTIMEX_DB_USER=postgres \\
-        REALTIMEX_DB_PASSWORD=postgres \\
+        REALTIMEX_DB_USER=frappe_user \\
+        REALTIMEX_DB_PASSWORD=password \\
         uvx realtimex-frappe run
     """
     from .commands.run import run_setup_and_start
