@@ -268,6 +268,39 @@ def run():
     run_setup_and_start()
 
 
+@main.command("setup")
+def setup():
+    """Set up a new Frappe site (admin mode).
+
+    This command performs initial site setup including:
+    - Initializing bench (if needed)
+    - Creating site with database
+    - Installing apps
+
+    Required environment variables (admin mode):
+        REALTIMEX_MODE: Set to 'admin'
+        REALTIMEX_DB_SCHEMA: Database schema for site isolation
+        REALTIMEX_SITE_NAME: Site name
+        REALTIMEX_SITE_PASSWORD: Frappe Administrator password
+        REALTIMEX_DB_NAME: PostgreSQL database name
+        REALTIMEX_DB_USER: Site DB username
+        REALTIMEX_DB_PASSWORD: Site DB password
+        REALTIMEX_ADMIN_DB_USER: Root DB username (for CREATE DATABASE)
+        REALTIMEX_ADMIN_DB_PASSWORD: Root DB password
+
+    Example:
+        REALTIMEX_MODE=admin \\
+        REALTIMEX_DB_SCHEMA=mysite_schema \\
+        REALTIMEX_SITE_PASSWORD=admin_password \\
+        REALTIMEX_ADMIN_DB_USER=postgres \\
+        REALTIMEX_ADMIN_DB_PASSWORD=postgres_password \\
+        uvx realtimex-frappe setup
+    """
+    from .commands.setup import run_setup
+
+    run_setup()
+
+
 @main.command("env-help")
 def env_help():
     """Show available environment variables.
