@@ -317,12 +317,15 @@ def env_help():
     print_env_var_help()
     console.print("\n[dim]Example usage:[/dim]")
     console.print('''
+[cyan]REALTIMEX_MODE[/cyan]=admin \\
 [cyan]REALTIMEX_SITE_NAME[/cyan]=mysite.localhost \\
-[cyan]REALTIMEX_ADMIN_PASSWORD[/cyan]=secret \\
+[cyan]REALTIMEX_SITE_PASSWORD[/cyan]=admin \\
 [cyan]REALTIMEX_DB_NAME[/cyan]=mysite \\
-[cyan]REALTIMEX_DB_USER[/cyan]=postgres \\
-[cyan]REALTIMEX_DB_PASSWORD[/cyan]=postgres \\
-uvx realtimex-frappe run
+[cyan]REALTIMEX_DB_USER[/cyan]=frappe_user \\
+[cyan]REALTIMEX_DB_PASSWORD[/cyan]=password \\
+[cyan]REALTIMEX_ADMIN_DB_USER[/cyan]=postgres \\
+[cyan]REALTIMEX_ADMIN_DB_PASSWORD[/cyan]=postgres \\
+uvx realtimex-frappe setup
 ''')
 
 
