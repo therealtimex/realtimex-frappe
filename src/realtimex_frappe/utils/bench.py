@@ -179,11 +179,8 @@ def regenerate_bench_config(config: RealtimexConfig) -> None:
 def create_site(config: RealtimexConfig, force: bool = False) -> bool:
     """Create a new Frappe site.
 
-    Uses provided credentials as root credentials to create the database
-    and user. Frappe's setup_database() will:
-    1. Create user if not exists (or update password)
-    2. Create database
-    3. Grant permissions
+    Uses admin DB credentials for root operations (CREATE DATABASE, CREATE USER).
+    The site DB credentials are stored in site_config.json for ongoing operations.
 
     Args:
         config: The realtimex configuration.
@@ -196,8 +193,12 @@ def create_site(config: RealtimexConfig, force: bool = False) -> bool:
         console.print("[red]✗ Site name is required[/red]")
         return False
 
-    if not config.site.admin_password:
-        console.print("[red]✗ Admin password is required[/red]")
+    if not config.site.site_password:
+        console.print("[red]✗ Site password is required (REALTIMEX_SITE_PASSWORD)[/red]")
+        return False
+
+    if not config.database.admin_user or not config.database.admin_password:
+        console.print("[red]✗ Admin DB credentials required (REALTIMEX_ADMIN_DB_USER/PASSWORD)[/red]")
         return False
 
     bench_path = Path(config.bench.path)
@@ -225,12 +226,10 @@ def create_site(config: RealtimexConfig, force: bool = False) -> bool:
     if config.database.name:
         args.extend(["--db-name", config.database.name])
 
-    # Pass credentials as root credentials for database setup
-    # Frappe will use these to create the database and user
-    if config.database.user:
-        args.extend(["--db-root-username", config.database.user])
-    if config.database.password:
-        args.extend(["--db-root-password", config.database.password])
+    # Pass admin credentials as root credentials for database setup
+    # Frappe will use these to CREATE DATABASE and CREATE USER
+    args.extend(["--db-root-username", config.database.admin_user])
+    args.extend(["--db-root-password", config.database.admin_password])
 
     console.print(f"[blue]Creating site {config.site.name}...[/blue]")
     result = run_bench_command(args, config, cwd=bench_path)

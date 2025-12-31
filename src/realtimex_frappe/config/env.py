@@ -19,6 +19,8 @@ ENV_DB_NAME = f"{ENV_PREFIX}DB_NAME"
 ENV_DB_USER = f"{ENV_PREFIX}DB_USER"
 ENV_DB_PASSWORD = f"{ENV_PREFIX}DB_PASSWORD"
 ENV_DB_SCHEMA = f"{ENV_PREFIX}DB_SCHEMA"
+ENV_ADMIN_DB_USER = f"{ENV_PREFIX}ADMIN_DB_USER"
+ENV_ADMIN_DB_PASSWORD = f"{ENV_PREFIX}ADMIN_DB_PASSWORD"
 ENV_REDIS_HOST = f"{ENV_PREFIX}REDIS_HOST"
 ENV_REDIS_CACHE_PORT = f"{ENV_PREFIX}REDIS_CACHE_PORT"
 ENV_REDIS_QUEUE_PORT = f"{ENV_PREFIX}REDIS_QUEUE_PORT"
@@ -28,6 +30,7 @@ ENV_NODE_BIN_DIR = f"{ENV_PREFIX}NODE_BIN_DIR"
 ENV_WKHTMLTOPDF_BIN_DIR = f"{ENV_PREFIX}WKHTMLTOPDF_BIN_DIR"
 ENV_FRAPPE_BRANCH = f"{ENV_PREFIX}FRAPPE_BRANCH"
 ENV_DEVELOPER_MODE = f"{ENV_PREFIX}DEVELOPER_MODE"
+ENV_MODE = f"{ENV_PREFIX}MODE"
 
 
 def get_env_or_none(key: str) -> Optional[str]:
@@ -105,6 +108,10 @@ def config_from_environment() -> RealtimexConfig:
         data["database"]["password"] = db_password
     if db_schema := get_env_or_none(ENV_DB_SCHEMA):
         data["database"]["schema"] = db_schema
+    if admin_db_user := get_env_or_none(ENV_ADMIN_DB_USER):
+        data["database"]["admin_user"] = admin_db_user
+    if admin_db_password := get_env_or_none(ENV_ADMIN_DB_PASSWORD):
+        data["database"]["admin_password"] = admin_db_password
 
     # Redis settings
     if redis_host := get_env_or_none(ENV_REDIS_HOST):
@@ -134,22 +141,47 @@ def config_from_environment() -> RealtimexConfig:
         for app in data["apps"]:
             app["branch"] = frappe_branch
 
+    # Mode setting
+    if mode := get_env_or_none(ENV_MODE):
+        mode_lower = mode.lower()
+        if mode_lower not in ("admin", "user"):
+            raise ValueError(f"Invalid {ENV_MODE}: '{mode}'. Must be 'admin' or 'user'")
+        data["mode"] = mode_lower
+
     return RealtimexConfig.model_validate(data)
 
 
 def get_missing_required_env_vars() -> list[str]:
     """Get list of missing required environment variables.
 
+    REALTIMEX_MODE must be explicitly set (no default).
+    Admin mode requires: schema, site_password, admin_db credentials.
+    User mode only requires base DB credentials.
+
     Returns:
         List of missing environment variable names.
     """
-    required = [
+    # Mode is always required - no silent defaults
+    required = [ENV_MODE]
+
+    mode = (get_env_or_none(ENV_MODE) or "").lower()
+
+    # Base requirements for both modes
+    required.extend([
         ENV_SITE_NAME,
-        ENV_ADMIN_PASSWORD,
         ENV_DB_NAME,
         ENV_DB_USER,
         ENV_DB_PASSWORD,
-    ]
+    ])
+
+    # Admin mode requires additional credentials for setup
+    if mode == "admin":
+        required.extend([
+            ENV_DB_SCHEMA,           # Schema name (required for setup)
+            ENV_SITE_PASSWORD,       # Frappe Administrator password
+            ENV_ADMIN_DB_USER,       # Root DB user for CREATE DATABASE
+            ENV_ADMIN_DB_PASSWORD,   # Root DB password
+        ])
 
     return [var for var in required if not get_env_or_none(var)]
 
@@ -168,21 +200,21 @@ def print_env_var_help() -> None:
     table.add_column("Description")
 
     env_vars = [
+        (ENV_MODE, "Yes", "-", "Operational mode: 'admin' (setup) or 'user' (run only)"),
         (ENV_SITE_NAME, "Yes", "-", "Site name (e.g., mysite.localhost)"),
         (ENV_SITE_PASSWORD, "Admin", "-", "Frappe Administrator password (required in admin mode)"),
         (ENV_DB_NAME, "Yes", "-", "PostgreSQL database name"),
-        (ENV_DB_USER, "Yes", "-", "PostgreSQL username"),
-        (ENV_DB_PASSWORD, "Yes", "-", "PostgreSQL password"),
+        (ENV_DB_USER, "Yes", "-", "PostgreSQL username (site credentials)"),
+        (ENV_DB_PASSWORD, "Yes", "-", "PostgreSQL password (site credentials)"),
+        (ENV_ADMIN_DB_USER, "Admin", "-", "Root DB username for CREATE DATABASE (admin mode)"),
+        (ENV_ADMIN_DB_PASSWORD, "Admin", "-", "Root DB password for CREATE DATABASE (admin mode)"),
         (ENV_DB_HOST, "No", "localhost", "PostgreSQL host"),
         (ENV_DB_PORT, "No", "5432", "PostgreSQL port"),
-        (ENV_DB_SCHEMA, "No", "-", "PostgreSQL schema (enables schema-based isolation)"),
+        (ENV_DB_SCHEMA, "Admin", "-", "PostgreSQL schema (required for setup)"),
         (ENV_DB_TYPE, "No", "postgres", "Database type"),
         (ENV_REDIS_HOST, "No", "127.0.0.1", "Redis host"),
-        (ENV_REDIS_PORT, "No", "6379", "Redis port"),
-        (ENV_BENCH_PATH, "No", "~/.realtimex.ai/storage/local-apps/frappe-bench", "Bench installation path"),
+        (ENV_BENCH_PATH, "No", "~/.realtimex.ai/storage/local-apps/frappe-bench", "Bench path"),
         (ENV_NODE_BIN_DIR, "No", "-", "Path to bundled Node.js bin directory"),
-        (ENV_WKHTMLTOPDF_BIN_DIR, "No", "-", "Path to bundled wkhtmltopdf bin directory"),
-        (ENV_FRAPPE_BRANCH, "No", "version-15", "Frappe/ERPNext branch"),
         (ENV_DEVELOPER_MODE, "No", "true", "Enable developer mode"),
     ]
 

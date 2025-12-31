@@ -1,11 +1,22 @@
 """Pydantic models for configuration validation."""
 
+from enum import Enum
 from pathlib import Path
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
 from ..utils.paths import get_default_bench_path
+
+
+class RunMode(str, Enum):
+    """Operational mode for the CLI."""
+
+    ADMIN = "admin"
+    """Full access: init, migrate, install apps, maintenance."""
+
+    USER = "user"
+    """Limited access: start existing site only, skip setup."""
 
 
 class FrappeConfig(BaseModel):
@@ -83,6 +94,12 @@ class DatabaseConfig(BaseModel):
     """PostgreSQL schema name. When set, enables schema-based isolation 
     (no DROP/CREATE DATABASE). Used for Supabase compatibility."""
 
+    # Admin credentials for setup operations (CREATE DATABASE, CREATE USER)
+    admin_user: Optional[str] = None
+    """Root/admin username for database setup (e.g., 'postgres')."""
+    admin_password: Optional[str] = None
+    """Root/admin password for database setup."""
+
     @field_validator("host")
     @classmethod
     def validate_host(cls, v: str) -> str:
@@ -155,6 +172,7 @@ class RealtimexConfig(BaseModel):
     """Root configuration model for realtimex-frappe."""
 
     version: str = "1.0.0"
+    mode: Optional[RunMode] = None
     frappe: FrappeConfig = Field(default_factory=FrappeConfig)
     apps: list[AppConfig] = Field(default_factory=list)
     binaries: BinariesConfig = Field(default_factory=BinariesConfig)
