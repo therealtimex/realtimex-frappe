@@ -31,6 +31,7 @@ ENV_WKHTMLTOPDF_BIN_DIR = f"{ENV_PREFIX}WKHTMLTOPDF_BIN_DIR"
 ENV_FRAPPE_BRANCH = f"{ENV_PREFIX}FRAPPE_BRANCH"
 ENV_DEVELOPER_MODE = f"{ENV_PREFIX}DEVELOPER_MODE"
 ENV_MODE = f"{ENV_PREFIX}MODE"
+ENV_FORCE_REINSTALL = f"{ENV_PREFIX}FORCE_REINSTALL"
 
 
 def get_env_or_none(key: str) -> Optional[str]:
@@ -148,6 +149,9 @@ def config_from_environment() -> RealtimexConfig:
             raise ValueError(f"Invalid {ENV_MODE}: '{mode}'. Must be 'admin' or 'user'")
         data["mode"] = mode_lower
 
+    # Force reinstall setting
+    data["force_reinstall"] = get_env_bool(ENV_FORCE_REINSTALL, default=False)
+
     return RealtimexConfig.model_validate(data)
 
 
@@ -216,6 +220,7 @@ def print_env_var_help() -> None:
         (ENV_BENCH_PATH, "No", "~/.realtimex.ai/storage/local-apps/frappe-bench", "Bench path"),
         (ENV_NODE_BIN_DIR, "No", "-", "Path to bundled Node.js bin directory"),
         (ENV_DEVELOPER_MODE, "No", "true", "Enable developer mode"),
+        (ENV_FORCE_REINSTALL, "No", "false", "Force delete and reinstall (for recovery)"),
     ]
 
     for var, required, default, desc in env_vars:

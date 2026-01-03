@@ -152,6 +152,7 @@ realtimex-frappe run
 | `REALTIMEX_REDIS_CACHE_PORT` | `13001` | Redis cache port |
 | `REALTIMEX_REDIS_QUEUE_PORT` | `11001` | Redis queue port |
 | `REALTIMEX_BENCH_PATH` | `~/.realtimex.ai/storage/local-apps/frappe-bench` | Installation path |
+| `REALTIMEX_FORCE_REINSTALL` | `false` | Delete and reinstall (for recovery) |
 
 Run `realtimex-frappe env-help` for the complete list.
 

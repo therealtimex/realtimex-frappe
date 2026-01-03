@@ -180,6 +180,8 @@ class RealtimexConfig(BaseModel):
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     site: SiteConfig = Field(default_factory=SiteConfig)
     bench: BenchConfig = Field(default_factory=BenchConfig)
+    force_reinstall: bool = False
+    """When True, delete existing bench/site and reinstall from scratch."""
 
     def with_overrides(
         self,

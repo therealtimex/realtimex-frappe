@@ -3,13 +3,14 @@
 Orchestrates complete site setup:
 1. Validate configuration
 2. Check system requirements
-3. Initialize development environment (bench init)
-4. Download applications
-5. Configure database connection (common_site_config.json)
-6. Start development server (Redis required for site creation)
-7. Create site and database schema (Frappe creates user = schema name)
-8. Install applications
-9. Output team credentials
+3. Check for existing installation (handle force reinstall)
+4. Initialize development environment (bench init)
+5. Download applications
+6. Configure database connection (common_site_config.json)
+7. Start development server (Redis required for site creation)
+8. Create site and database schema (Frappe creates user = schema name)
+9. Install applications
+10. Output team credentials
 """
 
 from typing import Optional
@@ -124,7 +125,36 @@ def run_setup(config: Optional[RealtimexConfig] = None) -> None:
     console.print(f"[green]✓[/green] Python, Node.js, Redis available")
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Step 3: Initialize development environment
+    # Step 3: Check for existing installation
+    # ─────────────────────────────────────────────────────────────────────────
+    from pathlib import Path
+    import shutil
+
+    bench_path = Path(config.bench.path)
+
+    if bench_path.exists():
+        if config.force_reinstall:
+            console.print(f"\n[yellow]Force reinstall enabled. Removing existing installation...[/yellow]")
+            try:
+                shutil.rmtree(bench_path)
+                console.print(f"[green]✓[/green] Removed {bench_path}")
+            except Exception as e:
+                console.print(f"[red]✗ Failed to remove {bench_path}: {e}[/red]")
+                raise SystemExit(1)
+        elif site_exists(config):
+            # Site exists - check if it's healthy
+            console.print(f"\n[yellow]Existing installation found at {bench_path}[/yellow]")
+            console.print(f"  Site '{config.site.name}' already exists.")
+            console.print("")
+            console.print("[bold]To force reinstall, set:[/bold]")
+            console.print("  [cyan]export REALTIMEX_FORCE_REINSTALL=true[/cyan]")
+            console.print("")
+            console.print("[bold]Or delete manually:[/bold]")
+            console.print(f"  [cyan]rm -rf {bench_path}[/cyan]")
+            raise SystemExit(1)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Step 4: Initialize development environment
     # ─────────────────────────────────────────────────────────────────────────
     console.print("\n[bold]Setting up development environment...[/bold]")
 
@@ -139,7 +169,7 @@ def run_setup(config: Optional[RealtimexConfig] = None) -> None:
         console.print("[green]✓[/green] Frappe framework ready")
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Step 4: Download applications
+    # Step 5: Download applications
     # ─────────────────────────────────────────────────────────────────────────
     console.print("\n[bold]Downloading applications...[/bold]")
 
@@ -151,7 +181,7 @@ def run_setup(config: Optional[RealtimexConfig] = None) -> None:
     console.print(f"[green]✓[/green] Applications ready: {', '.join(app_names) or 'frappe'}")
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Step 5: Configure database connection
+    # Step 6: Configure database connection
     # ─────────────────────────────────────────────────────────────────────────
     console.print("\n[bold]Configuring database connection...[/bold]")
 
@@ -159,7 +189,7 @@ def run_setup(config: Optional[RealtimexConfig] = None) -> None:
     console.print(f"[green]✓[/green] Connected to {config.database.host}")
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Step 6: Start bench (Redis required for site creation)
+    # Step 7: Start bench (Redis required for site creation)
     # ─────────────────────────────────────────────────────────────────────────
     console.print("\n[bold]Starting development server...[/bold]")
     console.print("[dim]Redis must be running for site creation and app installation[/dim]")
@@ -173,7 +203,7 @@ def run_setup(config: Optional[RealtimexConfig] = None) -> None:
         console.print("[green]✓[/green] Development server started")
 
         # ─────────────────────────────────────────────────────────────────────
-        # Step 7: Create site and database schema
+        # Step 8: Create site and database schema
         # ─────────────────────────────────────────────────────────────────────
         console.print("\n[bold]Creating site...[/bold]")
 
@@ -195,7 +225,7 @@ def run_setup(config: Optional[RealtimexConfig] = None) -> None:
             console.print(f"[green]✓[/green] Site '{config.site.name}' created with database schema")
 
         # ─────────────────────────────────────────────────────────────────────
-        # Step 8: Install applications
+        # Step 9: Install applications
         # ─────────────────────────────────────────────────────────────────────
         if config.apps:
             console.print("\n[bold]Installing applications...[/bold]")
@@ -216,7 +246,7 @@ def run_setup(config: Optional[RealtimexConfig] = None) -> None:
             bench_proc.kill()
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Step 9: Output team credentials
+    # Step 10: Output team credentials
     # ─────────────────────────────────────────────────────────────────────────
     # Frappe creates a user named after the schema (e.g., mysite_schema)
     # with the password provided via REALTIMEX_DB_PASSWORD
