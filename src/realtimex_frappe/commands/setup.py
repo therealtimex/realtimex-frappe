@@ -1,4 +1,16 @@
-"""Setup command - admin-only site initialization and migration."""
+"""Setup command - administrator site initialization.
+
+Orchestrates complete site setup:
+1. Validate configuration
+2. Check system requirements
+3. Initialize development environment (bench init)
+4. Download applications
+5. Configure database connection (common_site_config.json)
+6. Start development server (Redis required for site creation)
+7. Create site and database schema (Frappe creates user = schema name)
+8. Install applications
+9. Output team credentials
+"""
 
 from typing import Optional
 
@@ -22,6 +34,7 @@ from ..utils.bench import (
     site_is_healthy,
     update_common_site_config,
 )
+
 from ..utils.environment import (
     get_prerequisite_install_hint,
     validate_all_prerequisites,
@@ -32,162 +45,196 @@ console = Console()
 
 
 def run_setup(config: Optional[RealtimexConfig] = None) -> None:
-    """Run admin setup: create site, install apps, run migrations.
+    """Run administrator setup to create a new site.
 
-    This command is for administrators only. It:
-    1. Validates system prerequisites
-    2. Initializes bench (if needed)
-    3. Clones apps (if needed)
-    4. Creates site with database (requires admin DB credentials)
-    5. Installs apps on site
-    6. Updates common_site_config.json
+    Creates a fully configured Frappe site with:
+    - Database schema (isolated within shared database)
+    - Schema-owner user (for admin/migrations)
+    - Runtime user (for team members, limited privileges)
+    - Installed applications
 
     Args:
-        config: Optional pre-loaded configuration. If not provided,
-            configuration is read from environment variables.
+        config: Pre-loaded configuration, or None to load from environment.
+
+    Raises:
+        SystemExit: On validation or setup failures.
     """
     console.print(
-        Panel.fit("🔧 Realtimex Frappe Setup (Admin Mode)", style="bold blue")
+        Panel.fit("🔧 Realtimex Frappe Setup", style="bold blue")
     )
 
-    # Step 1: Load configuration from environment
-    console.print("\n[bold]Loading configuration...[/bold]")
+    # ─────────────────────────────────────────────────────────────────────────
+    # Step 1: Validate configuration
+    # ─────────────────────────────────────────────────────────────────────────
+    console.print("\n[bold]Checking environment...[/bold]")
 
     if config is None:
         missing = get_missing_required_env_vars()
         if missing:
-            console.print("[red]✗ Missing required environment variables:[/red]")
+            console.print("[red]✗ Missing required settings:[/red]")
             for var in missing:
-                console.print(f"  [red]•[/red] {var}")
-            console.print("\n[yellow]Set the following environment variables:[/yellow]")
+                console.print(f"  • {var}")
+            console.print("\n[dim]Run 'realtimex-frappe env-help' for details[/dim]")
             print_env_var_help()
             raise SystemExit(1)
 
         config = config_from_environment()
 
-    # Verify admin mode
+    # Mode validation
     if config.mode != RunMode.ADMIN:
         console.print("[red]✗ Setup requires REALTIMEX_MODE=admin[/red]")
         raise SystemExit(1)
 
-    # Verify schema is set (required for setup)
+    # Schema validation
     if not config.database.schema:
         console.print("[red]✗ Setup requires REALTIMEX_DB_SCHEMA[/red]")
-        console.print("[dim]Schema-based isolation is required for setup.[/dim]")
         raise SystemExit(1)
 
-    console.print(f"  Mode: [cyan]{config.mode.value}[/cyan]")
+    # Admin credentials validation
+    if not config.database.admin_user or not config.database.admin_password:
+        console.print("[red]✗ Setup requires admin database credentials[/red]")
+        console.print("[dim]Set REALTIMEX_ADMIN_DB_USER and REALTIMEX_ADMIN_DB_PASSWORD[/dim]")
+        raise SystemExit(1)
+
+    console.print("[green]✓[/green] All required settings found")
     console.print(f"  Site: [cyan]{config.site.name}[/cyan]")
-    console.print(f"  Bench: [cyan]{config.bench.path}[/cyan]")
-    console.print(
-        f"  Database: [cyan]{config.database.host}:{config.database.port}/{config.database.name}[/cyan]"
-    )
+    console.print(f"  Database: [cyan]{config.database.host}[/cyan]")
     console.print(f"  Schema: [cyan]{config.database.schema}[/cyan]")
-    console.print(f"  Admin DB User: [cyan]{config.database.admin_user}[/cyan]")
 
-    # Step 2: Validate system and bundled prerequisites
-    console.print("\n[bold]Validating prerequisites...[/bold]")
+    # ─────────────────────────────────────────────────────────────────────────
+    # Step 2: Check system requirements
+    # ─────────────────────────────────────────────────────────────────────────
+    console.print("\n[bold]Checking system requirements...[/bold]")
 
-    prereqs, binaries_result = validate_all_prerequisites(config)
+    prereqs, binaries = validate_all_prerequisites(config)
+
     if not prereqs.is_valid:
-        console.print(
-            f"[red]✗ Missing system prerequisites: {', '.join(prereqs.missing)}[/red]"
-        )
+        console.print(f"[red]✗ Missing: {', '.join(prereqs.missing)}[/red]")
         for prereq in prereqs.missing:
             hint = get_prerequisite_install_hint(prereq)
             if hint:
-                console.print(f"  [yellow]Install {prereq}: {hint}[/yellow]")
+                console.print(f"  [dim]{prereq}: {hint}[/dim]")
         raise SystemExit(1)
 
-    console.print(
-        f"[green]✓[/green] System prerequisites: {', '.join(prereqs.available)}"
-    )
-
-    if not binaries_result.is_valid:
-        console.print(
-            f"[red]✗ Missing bundled binaries: {', '.join(binaries_result.missing)}[/red]"
-        )
-        console.print(
-            "\n[yellow]Set REALTIMEX_NODE_BIN_DIR to the path of your Node.js bin directory.[/yellow]"
-        )
+    if not binaries.is_valid:
+        console.print(f"[red]✗ Missing binaries: {', '.join(binaries.missing)}[/red]")
+        console.print("[dim]Set REALTIMEX_NODE_BIN_DIR to your Node.js installation[/dim]")
         raise SystemExit(1)
 
-    console.print(
-        f"[green]✓[/green] Bundled binaries: {', '.join(binaries_result.available)}"
-    )
+    console.print(f"[green]✓[/green] Python, Node.js, Redis available")
 
-    # Step 4: Initialize bench (if needed)
-    console.print("\n[bold]Setting up bench...[/bold]")
+    # ─────────────────────────────────────────────────────────────────────────
+    # Step 3: Initialize development environment
+    # ─────────────────────────────────────────────────────────────────────────
+    console.print("\n[bold]Setting up development environment...[/bold]")
 
     if bench_exists(config):
-        console.print(f"[green]✓[/green] Using existing bench at {config.bench.path}")
+        console.print("[green]✓[/green] Frappe framework ready")
     else:
         ensure_bench_directory()
-        console.print("[blue]Initializing new bench...[/blue]")
+        console.print("[dim]Initializing Frappe framework...[/dim]")
         if not init_bench(config):
-            console.print("[red]✗ Failed to initialize bench[/red]")
+            console.print("[red]✗ Failed to initialize framework[/red]")
             raise SystemExit(1)
-        console.print("[green]✓[/green] Bench initialized")
+        console.print("[green]✓[/green] Frappe framework ready")
 
-    # Step 5: Get apps
-    console.print("\n[bold]Getting apps...[/bold]")
+    # ─────────────────────────────────────────────────────────────────────────
+    # Step 4: Download applications
+    # ─────────────────────────────────────────────────────────────────────────
+    console.print("\n[bold]Downloading applications...[/bold]")
 
     if not get_all_apps(config):
-        console.print("[red]✗ Failed to get apps[/red]")
+        console.print("[red]✗ Failed to download applications[/red]")
         raise SystemExit(1)
 
-    console.print("[green]✓[/green] Apps ready")
+    app_names = [app.name for app in config.apps] if config.apps else []
+    console.print(f"[green]✓[/green] Applications ready: {', '.join(app_names) or 'frappe'}")
 
-    # Step 6: Update common_site_config.json
-    console.print("\n[bold]Configuring site settings...[/bold]")
+    # ─────────────────────────────────────────────────────────────────────────
+    # Step 5: Configure database connection
+    # ─────────────────────────────────────────────────────────────────────────
+    console.print("\n[bold]Configuring database connection...[/bold]")
+
     update_common_site_config(config)
+    console.print(f"[green]✓[/green] Connected to {config.database.host}")
 
-    # Step 7: Create site (if needed)
-    console.print("\n[bold]Creating site...[/bold]")
+    # ─────────────────────────────────────────────────────────────────────────
+    # Step 6: Start bench (Redis required for site creation)
+    # ─────────────────────────────────────────────────────────────────────────
+    console.print("\n[bold]Starting development server...[/bold]")
+    console.print("[dim]Redis must be running for site creation and app installation[/dim]")
 
-    if site_exists(config):
-        healthy, reason = site_is_healthy(config)
-        if healthy:
-            console.print(f"[green]✓[/green] Site {config.site.name} already exists")
+    bench_proc = run_bench_start_subprocess(config)
+    try:
+        import time
+
+        # Wait for bench (including Redis) to be ready
+        time.sleep(5)
+        console.print("[green]✓[/green] Development server started")
+
+        # ─────────────────────────────────────────────────────────────────────
+        # Step 7: Create site and database schema
+        # ─────────────────────────────────────────────────────────────────────
+        console.print("\n[bold]Creating site...[/bold]")
+
+        if site_exists(config):
+            healthy, reason = site_is_healthy(config)
+            if healthy:
+                console.print(f"[green]✓[/green] Site '{config.site.name}' exists")
+            else:
+                console.print(f"[yellow]⚠ Recreating unhealthy site ({reason})...[/yellow]")
+                if not create_site(config, force=True):
+                    console.print("[red]✗ Failed to create site[/red]")
+                    raise SystemExit(1)
+                console.print(f"[green]✓[/green] Site '{config.site.name}' recreated")
         else:
-            console.print(
-                f"[yellow]⚠ Site exists but unhealthy ({reason}). Recreating...[/yellow]"
-            )
-            if not create_site(config, force=True):
-                console.print("[red]✗ Failed to recreate site[/red]")
+            console.print(f"[dim]Creating site '{config.site.name}' with schema '{config.database.schema}'...[/dim]")
+            if not create_site(config):
+                console.print("[red]✗ Failed to create site[/red]")
                 raise SystemExit(1)
-            console.print("[green]✓[/green] Site recreated")
-    else:
-        if not create_site(config):
-            console.print("[red]✗ Failed to create site[/red]")
-            raise SystemExit(1)
-        console.print(f"[green]✓[/green] Site {config.site.name} created")
+            console.print(f"[green]✓[/green] Site '{config.site.name}' created with database schema")
 
-    # Step 8: Install apps (requires running bench)
-    if config.apps:
-        console.print("\n[bold]Installing apps (starting temporary bench)...[/bold]")
-
-        bench_proc = run_bench_start_subprocess(config)
-        try:
-            import time
-
-            # Wait for bench to start
-            for _ in range(30):
-                time.sleep(2)
-                # Simple check if bench is responding
-                break
+        # ─────────────────────────────────────────────────────────────────────
+        # Step 8: Install applications
+        # ─────────────────────────────────────────────────────────────────────
+        if config.apps:
+            console.print("\n[bold]Installing applications...[/bold]")
 
             if not install_apps_on_site(config):
-                console.print("[red]✗ Failed to install apps[/red]")
-                bench_proc.terminate()
+                console.print("[red]✗ Failed to install applications[/red]")
                 raise SystemExit(1)
 
-            console.print("[green]✓[/green] Apps installed")
-        finally:
-            bench_proc.terminate()
-            bench_proc.wait()
+            console.print(f"[green]✓[/green] {', '.join(app_names)} installed")
+
+    finally:
+        # Stop the temporary bench process
+        console.print("[dim]Stopping development server...[/dim]")
+        bench_proc.terminate()
+        try:
+            bench_proc.wait(timeout=10)
+        except Exception:
+            bench_proc.kill()
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Step 9: Output team credentials
+    # ─────────────────────────────────────────────────────────────────────────
+    # Frappe creates a user named after the schema (e.g., mysite_schema)
+    # with the password provided via REALTIMEX_DB_PASSWORD
+    site_db_user = config.database.schema  # Frappe's design: user = schema name
 
     console.print("\n" + "=" * 60)
     console.print("[bold green]✓ Setup complete![/bold green]")
-    console.print(f"\n[dim]Site: http://{config.site.name}:{config.bench.port}[/dim]")
-    console.print("[dim]Run with: REALTIMEX_MODE=user realtimex-frappe run[/dim]")
+    console.print("\n[bold]Share these with your team:[/bold]\n")
+
+    env_block = f"""export REALTIMEX_MODE=user
+export REALTIMEX_SITE_NAME={config.site.name}
+export REALTIMEX_DB_HOST={config.database.host}
+export REALTIMEX_DB_PORT={config.database.port}
+export REALTIMEX_DB_NAME={config.database.name}
+export REALTIMEX_DB_SCHEMA={config.database.schema}
+export REALTIMEX_DB_USER={site_db_user}
+export REALTIMEX_DB_PASSWORD={config.database.password}"""
+
+    console.print(f"[cyan]{env_block}[/cyan]")
+    console.print(f"\n[dim]Run: realtimex-frappe run[/dim]")
+    console.print(f"[dim]URL: http://{config.site.name}:{config.bench.port}[/dim]")
