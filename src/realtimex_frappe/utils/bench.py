@@ -238,6 +238,68 @@ def create_site(config: RealtimexConfig, force: bool = False) -> bool:
     return result.returncode == 0
 
 
+def create_site_for_user_mode(config: RealtimexConfig) -> bool:
+    """Create site directory and site_config.json for user mode.
+
+    This is used by user mode on a fresh machine. It creates:
+    1. The site directory under sites/
+    2. site_config.json with DB credentials
+    3. Required subdirectories (private/, public/)
+
+    Unlike create_site(), this does NOT call `bench new-site` because:
+    - The database already exists (created by admin on another machine)
+    - We just need to configure local Frappe to connect to it
+
+    Args:
+        config: The realtimex configuration.
+
+    Returns:
+        True if successful, False otherwise.
+    """
+    if not config.site.name:
+        console.print("[red]✗ Site name is required[/red]")
+        return False
+
+    bench_path = Path(config.bench.path)
+    site_path = bench_path / "sites" / config.site.name
+
+    # Create site directory structure
+    try:
+        site_path.mkdir(parents=True, exist_ok=True)
+        (site_path / "private" / "files").mkdir(parents=True, exist_ok=True)
+        (site_path / "public" / "files").mkdir(parents=True, exist_ok=True)
+        (site_path / "locks").mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        console.print(f"[red]✗ Failed to create site directories: {e}[/red]")
+        return False
+
+    # Create site_config.json with DB credentials
+    site_config = {
+        "db_name": config.database.name,
+        "db_user": config.database.user,
+        "db_password": config.database.password,
+        "db_host": config.database.host,
+        "db_port": config.database.port,
+        "db_type": config.database.type,
+    }
+
+    # Add schema if using schema-based isolation
+    if config.database.schema:
+        site_config["db_schema"] = config.database.schema
+
+    config_path = site_path / "site_config.json"
+    try:
+        with open(config_path, "w") as f:
+            json.dump(site_config, f, indent=2)
+    except Exception as e:
+        console.print(f"[red]✗ Failed to write site_config.json: {e}[/red]")
+        return False
+
+    console.print(f"[green]✓[/green] Created site {config.site.name} (user mode)")
+    console.print(f"[dim]  Site config: {config_path}[/dim]")
+    return True
+
+
 def get_app(
     config: RealtimexConfig,
     app_url: str,

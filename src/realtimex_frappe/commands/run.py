@@ -16,6 +16,7 @@ from ..config.schema import RealtimexConfig, RunMode
 from ..utils.bench import (
     bench_exists,
     create_site,
+    create_site_for_user_mode,
     get_all_apps,
     init_bench,
     install_apps_on_site,
@@ -145,21 +146,28 @@ def run_setup_and_start(config: Optional[RealtimexConfig] = None) -> None:
             raise SystemExit(1)
         console.print("[green]✓[/green] Bench initialized")
 
-    # User mode: skip site creation and migrations, just configure and start
+    # User mode: initialize locally and connect to existing DB
     if config.mode == RunMode.USER:
-        console.print("\n[bold]User mode: Skipping site creation and migrations...[/bold]")
+        console.print("\n[bold]User mode: Configuring local environment...[/bold]")
 
-        # Ensure site directory and config exist (may have been set up by admin on remote)
+        # Clone apps (needed locally even though DB exists remotely)
+        if config.apps:
+            console.print("\n[bold]Getting apps...[/bold]")
+            if not get_all_apps(config):
+                console.print("[red]✗ Failed to get apps[/red]")
+                raise SystemExit(1)
+            console.print("[green]✓[/green] Apps ready")
+
+        # Create site directory and site_config.json if not exists
         if not site_exists(config):
-            console.print(f"[red]✗ Site {config.site.name} not found in bench.[/red]")
-            console.print("[yellow]Run in admin mode first to create the site.[/yellow]")
-            raise SystemExit(1)
+            console.print("\n[bold]Creating site configuration...[/bold]")
+            if not create_site_for_user_mode(config):
+                console.print("[red]✗ Failed to create site configuration[/red]")
+                raise SystemExit(1)
+        else:
+            console.print(f"[green]✓[/green] Site {config.site.name} found")
 
-        healthy, reason = site_is_healthy(config)
-        if not healthy:
-            console.print(f"[yellow]⚠ Site check: {reason}[/yellow]")
-
-        console.print(f"[green]✓[/green] Site {config.site.name} found")
+        # Update common_site_config.json
         update_common_site_config(config)
         console.print("[green]✓[/green] Configuration updated")
 
