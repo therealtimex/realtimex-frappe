@@ -12,10 +12,11 @@ from ..config.env import (
     get_missing_required_env_vars,
     print_env_var_help,
 )
-from ..config.schema import RealtimexConfig
+from ..config.schema import RealtimexConfig, RunMode
 from ..utils.bench import (
     bench_exists,
     create_site,
+    create_site_for_user_mode,
     get_all_apps,
     init_bench,
     install_apps_on_site,
@@ -116,6 +117,7 @@ def run_setup_and_start(config: Optional[RealtimexConfig] = None) -> None:
 
         config = config_from_environment()
 
+    console.print(f"  Mode: [cyan]{config.mode.value}[/cyan]")
     console.print(f"  Site: [cyan]{config.site.name}[/cyan]")
     console.print(f"  Bench: [cyan]{config.bench.path}[/cyan]")
     console.print(f"  Database: [cyan]{config.database.host}:{config.database.port}/{config.database.name}[/cyan]")
@@ -143,6 +145,36 @@ def run_setup_and_start(config: Optional[RealtimexConfig] = None) -> None:
             console.print("[red]✗ Failed to initialize bench[/red]")
             raise SystemExit(1)
         console.print("[green]✓[/green] Bench initialized")
+
+    # User mode: initialize locally and connect to existing DB
+    if config.mode == RunMode.USER:
+        console.print("\n[bold]User mode: Configuring local environment...[/bold]")
+
+        # Clone apps (needed locally even though DB exists remotely)
+        if config.apps:
+            console.print("\n[bold]Getting apps...[/bold]")
+            if not get_all_apps(config):
+                console.print("[red]✗ Failed to get apps[/red]")
+                raise SystemExit(1)
+            console.print("[green]✓[/green] Apps ready")
+
+        # Create site directory and site_config.json if not exists
+        if not site_exists(config):
+            console.print("\n[bold]Creating site configuration...[/bold]")
+            if not create_site_for_user_mode(config):
+                console.print("[red]✗ Failed to create site configuration[/red]")
+                raise SystemExit(1)
+        else:
+            console.print(f"[green]✓[/green] Site {config.site.name} found")
+
+        # Update common_site_config.json
+        update_common_site_config(config)
+        console.print("[green]✓[/green] Configuration updated")
+
+        # Start bench
+        console.print("\n[bold]Starting bench...[/bold]")
+        start_bench(config)
+        return
 
     # Step 5: Update common_site_config.json with Redis/DB settings
     console.print("\n[bold]Configuring site settings...[/bold]")

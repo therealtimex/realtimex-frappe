@@ -67,13 +67,13 @@ class TestRealtimexConfig:
 
         overridden = config.with_overrides(
             site_name="mysite.localhost",
-            admin_password="secret123",
+            site_password="secret123",
             db_host="db.supabase.co",
             db_port=6543,
         )
 
         assert overridden.site.name == "mysite.localhost"
-        assert overridden.site.admin_password == "secret123"
+        assert overridden.site.site_password == "secret123"
         assert overridden.database.host == "db.supabase.co"
         assert overridden.database.port == 6543
 
