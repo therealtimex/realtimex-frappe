@@ -225,6 +225,8 @@ def create_site(config: RealtimexConfig, force: bool = False) -> bool:
         args.extend(["--db-port", str(config.database.port)])
     if config.database.name:
         args.extend(["--db-name", config.database.name])
+    if config.database.password:
+        args.extend(["--db-password", config.database.password])
 
     # Pass admin credentials as root credentials for database setup
     # Frappe will use these to CREATE DATABASE and CREATE USER
