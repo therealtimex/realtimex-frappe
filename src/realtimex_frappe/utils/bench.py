@@ -239,16 +239,19 @@ def create_site(config: RealtimexConfig, force: bool = False) -> bool:
 
 
 def create_site_for_user_mode(config: RealtimexConfig) -> bool:
-    """Initialize site locally for user mode (database already exists remotely).
+    """Create site directory and site_config.json for user mode.
 
-    Uses Frappe's own initialization functions to ensure compatibility:
-    - make_site_dirs(): Creates directory structure
-    - make_site_config(): Creates site_config.json
+    This is used by user mode on a fresh machine. It creates:
+    1. The site directory under sites/
+    2. site_config.json with DB credentials
+    3. Required subdirectories matching Frappe's make_site_dirs()
 
-    Unlike create_site(), this does NOT call database setup because:
-    - The schema/user already exists (created by admin on another machine)
-    - The tables already exist (from admin's bootstrap_database)
-    - We just need local config to connect to the remote DB
+    Unlike create_site(), this does NOT call `bench new-site` because:
+    - The database already exists (created by admin on another machine)
+    - We just need to configure local Frappe to connect to it
+
+    Note: We can't import frappe here because realtimex-frappe runs in its
+    own virtualenv, not the bench virtualenv where frappe is installed.
 
     Args:
         config: The realtimex configuration.
@@ -256,52 +259,52 @@ def create_site_for_user_mode(config: RealtimexConfig) -> bool:
     Returns:
         True if successful, False otherwise.
     """
-    import frappe
-    from frappe.installer import make_site_dirs, make_site_config
-
     if not config.site.name:
         console.print("[red]✗ Site name is required[/red]")
         return False
 
-    site_name = config.site.name
     bench_path = Path(config.bench.path)
-    sites_path = bench_path / "sites"
+    site_path = bench_path / "sites" / config.site.name
 
-    # Initialize Frappe with site context (same as _new_site does)
-    frappe.init(site=site_name, sites_path=str(sites_path))
-
+    # Create site directory structure
+    # Must match Frappe's make_site_dirs() in frappe/installer.py:
+    #   public/files, private/backups, private/files, locks, logs
     try:
-        # Use Frappe's directory creation (stays in sync with upstream)
-        make_site_dirs()
-
-        # Build site_config dict with all required fields
-        site_config = {
-            "db_name": config.database.name,
-            "db_user": config.database.user,
-            "db_password": config.database.password,
-            "db_host": config.database.host,
-            "db_port": config.database.port,
-            "db_type": config.database.type,
-        }
-
-        # Add schema for schema-based isolation
-        if config.database.schema:
-            site_config["db_schema"] = config.database.schema
-
-        # Use Frappe's config creation (passing our pre-built dict)
-        make_site_config(site_config=site_config)
-
-        config_path = sites_path / site_name / "site_config.json"
-        console.print(f"[green]✓[/green] Created site {site_name} (user mode)")
-        console.print(f"[dim]  Site config: {config_path}[/dim]")
-        return True
-
+        site_path.mkdir(parents=True, exist_ok=True)
+        (site_path / "public" / "files").mkdir(parents=True, exist_ok=True)
+        (site_path / "private" / "backups").mkdir(parents=True, exist_ok=True)
+        (site_path / "private" / "files").mkdir(parents=True, exist_ok=True)
+        (site_path / "locks").mkdir(parents=True, exist_ok=True)
+        (site_path / "logs").mkdir(parents=True, exist_ok=True)
     except Exception as e:
-        console.print(f"[red]✗ Failed to initialize site: {e}[/red]")
+        console.print(f"[red]✗ Failed to create site directories: {e}[/red]")
         return False
 
-    finally:
-        frappe.destroy()
+    # Create site_config.json with DB credentials
+    site_config = {
+        "db_name": config.database.name,
+        "db_user": config.database.user,
+        "db_password": config.database.password,
+        "db_host": config.database.host,
+        "db_port": config.database.port,
+        "db_type": config.database.type,
+    }
+
+    # Add schema if using schema-based isolation
+    if config.database.schema:
+        site_config["db_schema"] = config.database.schema
+
+    config_path = site_path / "site_config.json"
+    try:
+        with open(config_path, "w") as f:
+            json.dump(site_config, f, indent=2)
+    except Exception as e:
+        console.print(f"[red]✗ Failed to write site_config.json: {e}[/red]")
+        return False
+
+    console.print(f"[green]✓[/green] Created site {config.site.name} (user mode)")
+    console.print(f"[dim]  Site config: {config_path}[/dim]")
+    return True
 
 
 def get_app(
