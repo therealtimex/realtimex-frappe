@@ -233,39 +233,62 @@ def new_site(
 
 @main.command("run")
 def run():
-    """Set up and start a Frappe site (production mode).
+    """Start a Frappe site (user mode).
 
-    This is the primary command for production use. It reads configuration
-    from environment variables, sets up the site if needed, and starts the
-    bench server.
+    This command starts an existing Frappe site. For initial setup,
+    use 'realtimex-frappe setup' first.
 
     Required environment variables:
+        REALTIMEX_MODE: Set to 'user' for run-only mode
         REALTIMEX_SITE_NAME: Site name (e.g., mysite.localhost)
-        REALTIMEX_ADMIN_PASSWORD: Administrator password
         REALTIMEX_DB_NAME: PostgreSQL database name
         REALTIMEX_DB_USER: PostgreSQL username
         REALTIMEX_DB_PASSWORD: PostgreSQL password
 
-    Optional environment variables:
-        REALTIMEX_DB_HOST: PostgreSQL host (default: localhost)
-        REALTIMEX_DB_PORT: PostgreSQL port (default: 5432)
-        REALTIMEX_REDIS_HOST: Redis host (default: 127.0.0.1)
-        REALTIMEX_REDIS_PORT: Redis port (default: 6379)
-        REALTIMEX_BENCH_PATH: Bench path (default: ./frappe-bench)
-        REALTIMEX_NODE_BIN_DIR: Path to Node.js bin directory
-        REALTIMEX_FRAPPE_BRANCH: Frappe branch (default: version-15)
-
     Example:
+        REALTIMEX_MODE=user \\
         REALTIMEX_SITE_NAME=mysite.localhost \\
-        REALTIMEX_ADMIN_PASSWORD=secret \\
         REALTIMEX_DB_NAME=mysite \\
-        REALTIMEX_DB_USER=postgres \\
-        REALTIMEX_DB_PASSWORD=postgres \\
+        REALTIMEX_DB_USER=frappe_user \\
+        REALTIMEX_DB_PASSWORD=password \\
         uvx realtimex-frappe run
     """
     from .commands.run import run_setup_and_start
 
     run_setup_and_start()
+
+
+@main.command("setup")
+def setup():
+    """Set up a new Frappe site (admin mode).
+
+    This command performs initial site setup including:
+    - Initializing bench (if needed)
+    - Creating site with database
+    - Installing apps
+
+    Required environment variables (admin mode):
+        REALTIMEX_MODE: Set to 'admin'
+        REALTIMEX_DB_SCHEMA: Database schema for site isolation
+        REALTIMEX_SITE_NAME: Site name
+        REALTIMEX_SITE_PASSWORD: Frappe Administrator password
+        REALTIMEX_DB_NAME: PostgreSQL database name
+        REALTIMEX_DB_USER: Site DB username
+        REALTIMEX_DB_PASSWORD: Site DB password
+        REALTIMEX_ADMIN_DB_USER: Root DB username (for CREATE DATABASE)
+        REALTIMEX_ADMIN_DB_PASSWORD: Root DB password
+
+    Example:
+        REALTIMEX_MODE=admin \\
+        REALTIMEX_DB_SCHEMA=mysite_schema \\
+        REALTIMEX_SITE_PASSWORD=admin_password \\
+        REALTIMEX_ADMIN_DB_USER=postgres \\
+        REALTIMEX_ADMIN_DB_PASSWORD=postgres_password \\
+        uvx realtimex-frappe setup
+    """
+    from .commands.setup import run_setup
+
+    run_setup()
 
 
 @main.command("env-help")
@@ -284,12 +307,15 @@ def env_help():
     print_env_var_help()
     console.print("\n[dim]Example usage:[/dim]")
     console.print('''
+[cyan]REALTIMEX_MODE[/cyan]=admin \\
 [cyan]REALTIMEX_SITE_NAME[/cyan]=mysite.localhost \\
-[cyan]REALTIMEX_ADMIN_PASSWORD[/cyan]=secret \\
+[cyan]REALTIMEX_SITE_PASSWORD[/cyan]=admin \\
 [cyan]REALTIMEX_DB_NAME[/cyan]=mysite \\
-[cyan]REALTIMEX_DB_USER[/cyan]=postgres \\
-[cyan]REALTIMEX_DB_PASSWORD[/cyan]=postgres \\
-uvx realtimex-frappe run
+[cyan]REALTIMEX_DB_USER[/cyan]=frappe_user \\
+[cyan]REALTIMEX_DB_PASSWORD[/cyan]=password \\
+[cyan]REALTIMEX_ADMIN_DB_USER[/cyan]=postgres \\
+[cyan]REALTIMEX_ADMIN_DB_PASSWORD[/cyan]=postgres \\
+uvx realtimex-frappe setup
 ''')
 
 

@@ -179,11 +179,8 @@ def regenerate_bench_config(config: RealtimexConfig) -> None:
 def create_site(config: RealtimexConfig, force: bool = False) -> bool:
     """Create a new Frappe site.
 
-    Uses provided credentials as root credentials to create the database
-    and user. Frappe's setup_database() will:
-    1. Create user if not exists (or update password)
-    2. Create database
-    3. Grant permissions
+    Uses admin DB credentials for root operations (CREATE DATABASE, CREATE USER).
+    The site DB credentials are stored in site_config.json for ongoing operations.
 
     Args:
         config: The realtimex configuration.
@@ -196,8 +193,12 @@ def create_site(config: RealtimexConfig, force: bool = False) -> bool:
         console.print("[red]✗ Site name is required[/red]")
         return False
 
-    if not config.site.admin_password:
-        console.print("[red]✗ Admin password is required[/red]")
+    if not config.site.site_password:
+        console.print("[red]✗ Site password is required (REALTIMEX_SITE_PASSWORD)[/red]")
+        return False
+
+    if not config.database.admin_user or not config.database.admin_password:
+        console.print("[red]✗ Admin DB credentials required (REALTIMEX_ADMIN_DB_USER/PASSWORD)[/red]")
         return False
 
     bench_path = Path(config.bench.path)
@@ -206,7 +207,7 @@ def create_site(config: RealtimexConfig, force: bool = False) -> bool:
         "new-site",
         config.site.name,
         "--admin-password",
-        config.site.admin_password,
+        config.site.site_password,
     ]
 
     # Force recreate if recovering from partial state
@@ -224,17 +225,86 @@ def create_site(config: RealtimexConfig, force: bool = False) -> bool:
         args.extend(["--db-port", str(config.database.port)])
     if config.database.name:
         args.extend(["--db-name", config.database.name])
-
-    # Pass credentials as root credentials for database setup
-    # Frappe will use these to create the database and user
-    if config.database.user:
-        args.extend(["--db-root-username", config.database.user])
     if config.database.password:
-        args.extend(["--db-root-password", config.database.password])
+        args.extend(["--db-password", config.database.password])
+
+    # Pass admin credentials as root credentials for database setup
+    # Frappe will use these to CREATE DATABASE and CREATE USER
+    args.extend(["--db-root-username", config.database.admin_user])
+    args.extend(["--db-root-password", config.database.admin_password])
 
     console.print(f"[blue]Creating site {config.site.name}...[/blue]")
     result = run_bench_command(args, config, cwd=bench_path)
     return result.returncode == 0
+
+
+def create_site_for_user_mode(config: RealtimexConfig) -> bool:
+    """Create site directory and site_config.json for user mode.
+
+    This is used by user mode on a fresh machine. It creates:
+    1. The site directory under sites/
+    2. site_config.json with DB credentials
+    3. Required subdirectories matching Frappe's make_site_dirs()
+
+    Unlike create_site(), this does NOT call `bench new-site` because:
+    - The database already exists (created by admin on another machine)
+    - We just need to configure local Frappe to connect to it
+
+    Note: We can't import frappe here because realtimex-frappe runs in its
+    own virtualenv, not the bench virtualenv where frappe is installed.
+
+    Args:
+        config: The realtimex configuration.
+
+    Returns:
+        True if successful, False otherwise.
+    """
+    if not config.site.name:
+        console.print("[red]✗ Site name is required[/red]")
+        return False
+
+    bench_path = Path(config.bench.path)
+    site_path = bench_path / "sites" / config.site.name
+
+    # Create site directory structure
+    # Must match Frappe's make_site_dirs() in frappe/installer.py:
+    #   public/files, private/backups, private/files, locks, logs
+    try:
+        site_path.mkdir(parents=True, exist_ok=True)
+        (site_path / "public" / "files").mkdir(parents=True, exist_ok=True)
+        (site_path / "private" / "backups").mkdir(parents=True, exist_ok=True)
+        (site_path / "private" / "files").mkdir(parents=True, exist_ok=True)
+        (site_path / "locks").mkdir(parents=True, exist_ok=True)
+        (site_path / "logs").mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        console.print(f"[red]✗ Failed to create site directories: {e}[/red]")
+        return False
+
+    # Create site_config.json with DB credentials
+    site_config = {
+        "db_name": config.database.name,
+        "db_user": config.database.user,
+        "db_password": config.database.password,
+        "db_host": config.database.host,
+        "db_port": config.database.port,
+        "db_type": config.database.type,
+    }
+
+    # Add schema if using schema-based isolation
+    if config.database.schema:
+        site_config["db_schema"] = config.database.schema
+
+    config_path = site_path / "site_config.json"
+    try:
+        with open(config_path, "w") as f:
+            json.dump(site_config, f, indent=2)
+    except Exception as e:
+        console.print(f"[red]✗ Failed to write site_config.json: {e}[/red]")
+        return False
+
+    console.print(f"[green]✓[/green] Created site {config.site.name} (user mode)")
+    console.print(f"[dim]  Site config: {config_path}[/dim]")
+    return True
 
 
 def get_app(

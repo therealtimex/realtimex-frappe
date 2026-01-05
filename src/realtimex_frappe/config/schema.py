@@ -1,11 +1,22 @@
 """Pydantic models for configuration validation."""
 
+from enum import Enum
 from pathlib import Path
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
 from ..utils.paths import get_default_bench_path
+
+
+class RunMode(str, Enum):
+    """Operational mode for the CLI."""
+
+    ADMIN = "admin"
+    """Full access: init, migrate, install apps, maintenance."""
+
+    USER = "user"
+    """Limited access: start existing site only, skip setup."""
 
 
 class FrappeConfig(BaseModel):
@@ -83,6 +94,12 @@ class DatabaseConfig(BaseModel):
     """PostgreSQL schema name. When set, enables schema-based isolation 
     (no DROP/CREATE DATABASE). Used for Supabase compatibility."""
 
+    # Admin credentials for setup operations (CREATE DATABASE, CREATE USER)
+    admin_user: Optional[str] = None
+    """Root/admin username for database setup (e.g., 'postgres')."""
+    admin_password: Optional[str] = None
+    """Root/admin password for database setup."""
+
     @field_validator("host")
     @classmethod
     def validate_host(cls, v: str) -> str:
@@ -120,7 +137,8 @@ class SiteConfig(BaseModel):
     """Configuration for the Frappe site."""
 
     name: Optional[str] = None
-    admin_password: Optional[str] = None
+    site_password: Optional[str] = None
+    """Password for the Frappe Administrator user (NOT the database)."""
 
 
 class BenchConfig(BaseModel):
@@ -154,6 +172,7 @@ class RealtimexConfig(BaseModel):
     """Root configuration model for realtimex-frappe."""
 
     version: str = "1.0.0"
+    mode: Optional[RunMode] = None
     frappe: FrappeConfig = Field(default_factory=FrappeConfig)
     apps: list[AppConfig] = Field(default_factory=list)
     binaries: BinariesConfig = Field(default_factory=BinariesConfig)
@@ -161,11 +180,13 @@ class RealtimexConfig(BaseModel):
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     site: SiteConfig = Field(default_factory=SiteConfig)
     bench: BenchConfig = Field(default_factory=BenchConfig)
+    force_reinstall: bool = False
+    """When True, delete existing bench/site and reinstall from scratch."""
 
     def with_overrides(
         self,
         site_name: Optional[str] = None,
-        admin_password: Optional[str] = None,
+        site_password: Optional[str] = None,
         db_host: Optional[str] = None,
         db_port: Optional[int] = None,
         db_name: Optional[str] = None,
@@ -178,8 +199,8 @@ class RealtimexConfig(BaseModel):
 
         if site_name is not None:
             data["site"]["name"] = site_name
-        if admin_password is not None:
-            data["site"]["admin_password"] = admin_password
+        if site_password is not None:
+            data["site"]["site_password"] = site_password
         if db_host is not None:
             data["database"]["host"] = db_host
         if db_port is not None:
