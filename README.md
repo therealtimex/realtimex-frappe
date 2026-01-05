@@ -74,7 +74,8 @@ Use the credentials output from admin setup to run on any machine:
     "REALTIMEX_DB_NAME": "postgres",
     "REALTIMEX_DB_SCHEMA": "mysite_schema",
     "REALTIMEX_DB_USER": "mysite_schema",
-    "REALTIMEX_DB_PASSWORD": "your_site_password"
+    "REALTIMEX_DB_PASSWORD": "your_site_password",
+    "REALTIMEX_PORT": "8080"
   },
   "port": 8000
 }
